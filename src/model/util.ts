@@ -1,0 +1,1 @@
+export const as = <T>(t: T): T => t
