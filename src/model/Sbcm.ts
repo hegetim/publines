@@ -22,3 +22,10 @@ export const mkStoryline = (publications: Publication[]): Storyline => {
     }
     return { authorIds: orderedAuthors, meetings };
 }
+
+export type BlockCrossings = [number, number, number][];
+
+export interface SBCMRealization {
+    initialPermutation: number[],
+    blockCrossings: BlockCrossings,
+}
