@@ -4,7 +4,7 @@ import { as } from "./util";
 interface DblpAuthorSearch {
     result: {
         status: { text: string },
-        hits: { hit: DblpAuthorSearchHit[] }
+        hits: { hit?: DblpAuthorSearchHit[] }
     }
 }
 
@@ -32,15 +32,22 @@ export const findAuthor = async (name: string) => {
     }
 };
 
-export const mkSuggestions = (search: DblpAuthorSearch): [string, Author][] => search.result.hits.hit.map(hit => {
-    const hint = `${hit.info.author}${hit.info.notes ? ` (${hit.info.notes.note.text})` : ""}`;
-    const id = (hit.info.url.match(/\w+\/[A-Za-z0-9_-]+$/) ?? [])[0];
-    if (!id) {
-        console.warn(`could not extract id from ${hit.info.url}`);
+export const mkSuggestions = (search: DblpAuthorSearch): [string, Author][] => {
+    if (search.result.hits.hit) {
+        return search.result.hits.hit.map(hit => {
+            const hint = `${hit.info.author}${hit.info.notes ? ` (${hit.info.notes.note.text})` : ""}`;
+            const id = (hit.info.url.match(/\w+\/[A-Za-z0-9_-]+$/) ?? [])[0];
+            if (!id) {
+                console.warn(`could not extract id from ${hit.info.url}`);
+            }
+            const author = as<Author>({ name: hit.info.author, id: id ?? "" });
+            return [hint, author];
+        });
+    } else {
+        console.log(search);
+        return [];
     }
-    const author = as<Author>({ name: hit.info.author, id: id ?? "" });
-    return [hint, author];
-});
+}
 
 export const loadPublications = async (id: string) => {
     const target = new URL(`https://dblp.org/pid/${id}.xml`);
