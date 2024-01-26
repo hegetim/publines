@@ -5,6 +5,23 @@ export interface DrawingInfo {
     stretch: number,
 }
 
+export type Section = MeetingSect | BlockCrossingSect | EmptySect
+
+export interface MeetingSect {
+    type: 'meeting',
+    from: number,
+    to: number,
+}
+
+export interface BlockCrossingSect {
+    type: 'block-crossing'
+    bc: [number, number, number],
+}
+
+export interface EmptySect {
+    type: 'empty'
+}
+
 export interface BcMetrics {
     info: DrawingInfo,
     smallGroupAtTop: boolean,
