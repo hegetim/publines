@@ -3,7 +3,7 @@ import { as } from "../model/util"
 import { DrawingInfo, bcWidth, drawSLine, mkBcMetrics } from "./StorylineUtils"
 
 export const StorylineTest = (props: {}) => {
-  const info = as<DrawingInfo>({ lineDist: 10, stretch: .5 });
+  const info = as<DrawingInfo>({ lineDist: 10, stretch: .4 });
   const [m1, m2, m3, m4] = [mkBcMetrics(info, 0, 0, 1), mkBcMetrics(info, 1, 3, 4), mkBcMetrics(info, 3, 3, 4), mkBcMetrics(info, 0, 1, 4)];
   const [w1, w2, w3, w4] = [bcWidth(m1), bcWidth(m2), bcWidth(m3), bcWidth(m4)];
   console.log({ w1, w2, w3, w4 })

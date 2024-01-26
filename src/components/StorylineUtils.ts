@@ -44,7 +44,7 @@ export const mkBcMetrics = (info: DrawingInfo, a: number, b: number, c: number) 
     const m = smallGroupAtTop ? b + (c - b + 1) / 2 : a + (b - a) / 2;
     const n = c - m + a;
     const f = Math.sqrt(s * s - (p - q) * (p - q) + (m - n) * (m - n));
-    const t = 2 * f * f / (4 * Math.sqrt(f * f - w * w));
+    const t = f * f / (2 * Math.sqrt(f * f - w * w));
     const k = m + (smallGroupAtTop ? -1 : 1) * t / 2;
     return as<BcMetrics>({ info, smallGroupAtTop, bc: [a, b, c], p, s, k, w, t });
 }
