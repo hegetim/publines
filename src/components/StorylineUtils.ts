@@ -1,8 +1,12 @@
+import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "../model/Sbcm";
 import { as } from "../model/util";
 
 export interface DrawingInfo {
     lineDist: number,
     stretch: number,
+    crossing2crossingMargin: number,
+    crossing2meetingMargin: number,
+    meeting2meetingMargin: number,
 }
 
 export type Section = MeetingSect | BlockCrossingSect | EmptySect
@@ -22,6 +26,38 @@ export interface EmptySect {
     type: 'empty'
 }
 
+export const mkSections = (story: Storyline, realization: SBCMRealization) => {
+    let perm = realization.initialPermutation;
+    let [i, j] = [0, 0];
+    const result: Section[] = []; // mutable :(
+    while (true) {
+        const meeting = story.meetings[i];
+        if (meeting === undefined) {
+            return result;
+        } else {
+            const supported = supportsMeeting(perm, meeting)
+            if (supported !== false) {
+                result.push({ type: 'meeting', ...supported });
+                i += 1;
+            } else {
+                const nextBc = realization.blockCrossings[j];
+                if (nextBc === undefined) {
+                    console.log(`no block crossing left but meeting ${meeting} is unsupported`);
+                    return undefined;
+                } else {
+                    result.push({ type: 'block-crossing', bc: nextBc });
+                    j += 1;
+                    perm = applyBc(perm, ...nextBc);
+                }
+            }
+        }
+    }
+}
+
+export const drawSections = (info: DrawingInfo, sections: Section[], initialPermutation: number[]) => {
+    // todo...
+}
+
 export interface BcMetrics {
     info: DrawingInfo,
     smallGroupAtTop: boolean,
@@ -33,7 +69,7 @@ export interface BcMetrics {
     w: number,
 }
 
-export const bcWidth = (m: BcMetrics) => m.w * m.info.lineDist
+export const bcWidth = (m: BcMetrics) => m.w * m.info.lineDist;
 
 export const mkBcMetrics = (info: DrawingInfo, a: number, b: number, c: number) => {
     const smallGroupAtTop = b - a + 1 <= c - b;

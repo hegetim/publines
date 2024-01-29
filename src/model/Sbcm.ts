@@ -29,3 +29,16 @@ export interface SBCMRealization {
     initialPermutation: number[],
     blockCrossings: BlockCrossings,
 }
+
+export const applyBc = (perm: number[], a: number, b: number, c: number) =>
+    [...(a > 0 ? perm.slice(0, a) : []), ...perm.slice(b + 1, c + 1), ...perm.slice(a, b + 1), ...perm.slice(c + 1)];
+
+export const supportsMeeting = (perm: number[], meeting: number[]) => {
+    const i = perm.findIndex(j => meeting.includes(j));
+    const j = meeting.length;
+    if (i >= 0 && i + j <= perm.length && perm.slice(i, i + j).every(k => meeting.includes(k))) {
+        return { from: i, to: j };
+    } else {
+        return false;
+    }
+}
