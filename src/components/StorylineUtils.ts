@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "../model/Sbcm";
 import { as, assertExhaustive } from "../model/util";
 
@@ -69,14 +70,34 @@ export const drawSections = (info: DrawingConfig, sections: Section[], initialPe
         } else if (sect.type === 'block-crossing') {
             // update xbuf
             // update paths
-        } else { assertExhaustive(sect) }
+        } else { assertExhaustive(sect); }
     }
 }
 
+const meetingWidth = (info: DrawingConfig) => info.meetingStyle === 'Bar' ? info.lineDist / 5 :
+    info.meetingStyle === 'Metro' ? info.lineDist * 2 / 3 : assertExhaustive(info.meetingStyle);
+
 const drawBar = (info: DrawingConfig, atX: number, from: number, to: number) => {
-    const w = Math.min(info.crossing2meetingMargin, info.meeting2meetingMargin) * 0.5;
-    const h = (to - from + 0.5) * info.lineDist;
-    return `M ${atX - w / 2} ${(from - 0.25) * info.lineDist} h ${w} v ${h} h ${-w} z`;
+    const w = info.lineDist / 5;
+    const h = (to - from + 0.2) * info.lineDist;
+    return `M ${atX - w / 2} ${(from - 0.1) * info.lineDist} h ${w} v ${h} h ${-w} z`;
+}
+
+export const drawMetroStation = (info: DrawingConfig, atX: number, from: number, to: number) => {
+    const d = info.lineDist
+    const r = d / 3;
+    const s = 4 / 5 * r;
+    const t = Math.sqrt(r * r - s * s / 4);
+    const pre = `M ${atX - s / 2} ${from * d + t}`;
+    if (from === to) {
+        return `${pre} a ${r} ${r} 0 1 1 ${s} 0 a ${r} ${r} 0 0 1 ${-s} 0 z`; // obfuscated circle :(
+    } else {
+        const top = `a ${r} ${r} 0 1 1 ${s} 0 v ${d - 2 * t}`;
+        const midR = _.range(from + 1, to).map(() => `a ${r} ${r} 0 0 1 0 ${2 * t} v ${d - 2 * t}`).join(" ");
+        const bottom = `a ${r} ${r} 0 1 1 ${-s} 0 v ${2 * t - d}`;
+        const midL = _.range(from + 1, to).map(() => `a ${r} ${r} 0 0 1 0 ${-2 * t} v ${2 * t - d}`).join(" ");
+        return `${pre} ${top} ${midR} ${bottom} ${midL} z`;
+    }
 }
 
 export interface BcMetrics {
