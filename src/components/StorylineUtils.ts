@@ -1,13 +1,16 @@
 import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "../model/Sbcm";
-import { as } from "../model/util";
+import { as, assertExhaustive } from "../model/util";
 
-export interface DrawingInfo {
+export interface DrawingConfig {
     lineDist: number,
     stretch: number,
     crossing2crossingMargin: number,
     crossing2meetingMargin: number,
     meeting2meetingMargin: number,
+    meetingStyle: MeetingStyle,
 }
+
+export type MeetingStyle = 'Bar' | 'Metro'
 
 export type Section = MeetingSect | BlockCrossingSect | EmptySect
 
@@ -54,12 +57,30 @@ export const mkSections = (story: Storyline, realization: SBCMRealization) => {
     }
 }
 
-export const drawSections = (info: DrawingInfo, sections: Section[], initialPermutation: number[]) => {
-    // todo...
+export const drawSections = (info: DrawingConfig, sections: Section[], initialPermutation: number[]) => {
+    const paths = new Array<string>(initialPermutation.length).fill("");
+    const xBuf = new Array<[number, Section['type']]>(initialPermutation.length).fill([0, 'empty']);
+    const meetings: string[] = [];
+    for (const sect of sections) {
+        if (sect.type === 'empty') { /* ignore it */ }
+        else if (sect.type === 'meeting') {
+            // update xbuf
+            // create meeting
+        } else if (sect.type === 'block-crossing') {
+            // update xbuf
+            // update paths
+        } else { assertExhaustive(sect) }
+    }
+}
+
+const drawBar = (info: DrawingConfig, atX: number, from: number, to: number) => {
+    const w = Math.min(info.crossing2meetingMargin, info.meeting2meetingMargin) * 0.5;
+    const h = (to - from + 0.5) * info.lineDist;
+    return `M ${atX - w / 2} ${(from - 0.25) * info.lineDist} h ${w} v ${h} h ${-w} z`;
 }
 
 export interface BcMetrics {
-    info: DrawingInfo,
+    info: DrawingConfig,
     smallGroupAtTop: boolean,
     bc: [number, number, number]
     p: number,
@@ -71,7 +92,7 @@ export interface BcMetrics {
 
 export const bcWidth = (m: BcMetrics) => m.w * m.info.lineDist;
 
-export const mkBcMetrics = (info: DrawingInfo, a: number, b: number, c: number) => {
+export const mkBcMetrics = (info: DrawingConfig, a: number, b: number, c: number) => {
     const smallGroupAtTop = b - a + 1 <= c - b;
     const p = b + 0.5 + (smallGroupAtTop ? 1 : -1) * info.stretch * (c - a);
     const q = c - p + a;
