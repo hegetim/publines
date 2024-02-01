@@ -1,33 +1,47 @@
 import _ from "lodash";
 import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "../model/Sbcm";
-import { as, assertExhaustive } from "../model/util";
+import { as, assertExhaustive, matchString } from "../model/util";
 
 export interface DrawingConfig {
     lineDist: number,
     stretch: number,
+    meetingStyle: MeetingStyle,
     crossing2crossingMargin: number,
     crossing2meetingMargin: number,
     meeting2meetingMargin: number,
-    meetingStyle: MeetingStyle,
+    initialMargin: number,
+    finalMargin: number,
 }
+
+export const defaultConfig = (lineDist: number) => as<DrawingConfig>({
+    lineDist,
+    stretch: .4,
+    initialMargin: lineDist / 2,
+    finalMargin: lineDist / 2,
+    crossing2crossingMargin: lineDist / 4,
+    crossing2meetingMargin: lineDist / 4,
+    meeting2meetingMargin: lineDist / 2,
+    meetingStyle: 'Metro',
+});
 
 export type MeetingStyle = 'Bar' | 'Metro'
 
 export type Section = MeetingSect | BlockCrossingSect | EmptySect
 
 export interface MeetingSect {
-    type: 'meeting',
+    kind: 'meeting',
     from: number,
     to: number,
 }
 
 export interface BlockCrossingSect {
-    type: 'block-crossing'
+    kind: 'block-crossing'
     bc: [number, number, number],
+    perm: number[],
 }
 
 export interface EmptySect {
-    type: 'empty'
+    kind: 'empty'
 }
 
 export const mkSections = (story: Storyline, realization: SBCMRealization) => {
@@ -41,15 +55,15 @@ export const mkSections = (story: Storyline, realization: SBCMRealization) => {
         } else {
             const supported = supportsMeeting(perm, meeting)
             if (supported !== false) {
-                result.push({ type: 'meeting', ...supported });
+                result.push({ kind: 'meeting', ...supported });
                 i += 1;
             } else {
                 const nextBc = realization.blockCrossings[j];
                 if (nextBc === undefined) {
-                    console.log(`no block crossing left but meeting ${meeting} is unsupported`);
+                    console.error(`no block crossing left but meeting ${meeting} is unsupported`);
                     return undefined;
                 } else {
-                    result.push({ type: 'block-crossing', bc: nextBc });
+                    result.push({ kind: 'block-crossing', bc: nextBc, perm: perm.slice(nextBc[0], nextBc[2] + 1) });
                     j += 1;
                     perm = applyBc(perm, ...nextBc);
                 }
@@ -59,23 +73,50 @@ export const mkSections = (story: Storyline, realization: SBCMRealization) => {
 }
 
 export const drawSections = (info: DrawingConfig, sections: Section[], initialPermutation: number[]) => {
-    const paths = new Array<string>(initialPermutation.length).fill("");
-    const xBuf = new Array<[number, Section['type']]>(initialPermutation.length).fill([0, 'empty']);
+    const paths = new Array<string>(initialPermutation.length).fill("").map((_, i) => `M 0 ${i * info.lineDist}`);
+    const xBuf = new Array<[number, Section['kind']]>(initialPermutation.length).fill([0, 'empty']);
+    // console.log({ paths, xBuf })
     const meetings: string[] = [];
     for (const sect of sections) {
-        if (sect.type === 'empty') { /* ignore it */ }
-        else if (sect.type === 'meeting') {
-            // update xbuf
-            // create meeting
-        } else if (sect.type === 'block-crossing') {
-            // update xbuf
-            // update paths
+        if (sect.kind === 'empty') { /* ignore it */ }
+        else if (sect.kind === 'meeting') {
+            const x = _.range(sect.from, sect.to + 1).reduce((max, i) =>
+                Math.max(max, xBuf[i]![0] + meetingMargin(info, xBuf[i]![1]) + meetingWidth(info) / 2), 0);
+            _.range(sect.from, sect.to + 1).forEach(i => xBuf[i] = [x + meetingWidth(info) / 2, sect.kind]);
+            meetings.push(drawMeeting(info, x, sect));
+            // console.log({ sect, at: x })
+        } else if (sect.kind === 'block-crossing') {
+            const metrics = mkBcMetrics(info, ...sect.bc);
+            const x = _.range(sect.bc[0], sect.bc[2] + 1).reduce((max, i) =>
+                Math.max(max, xBuf[i]![0] + crossingMargin(info, xBuf[i]![1])), 0);
+            _.range(sect.bc[0], sect.bc[2] + 1).forEach(i => {
+                xBuf[i] = [x + bcWidth(metrics), sect.kind];
+                paths[sect.perm[i - sect.bc[0]]!] += ` H ${x} ${drawSLine(metrics, i)}`;
+            });
+            // console.log({ sect, at: x })
         } else { assertExhaustive(sect); }
     }
+    const width = Math.max(...xBuf.map(x => x[0])) + info.finalMargin;
+    const height = initialPermutation.length * info.lineDist;
+    paths.forEach((_, i, self) => self[i] += ` H ${width}`);
+    return { paths, meetings, width, height };
 }
 
-const meetingWidth = (info: DrawingConfig) => info.meetingStyle === 'Bar' ? info.lineDist / 5 :
-    info.meetingStyle === 'Metro' ? info.lineDist * 2 / 3 : assertExhaustive(info.meetingStyle);
+const meetingMargin = (info: DrawingConfig, previous: Section['kind']) => matchString(previous, {
+    'empty': () => info.initialMargin,
+    'meeting': () => info.meeting2meetingMargin,
+    'block-crossing': () => info.crossing2meetingMargin,
+});
+
+const meetingWidth = (info: DrawingConfig) => matchString(info.meetingStyle, {
+    'Bar': () => info.lineDist / 5,
+    'Metro': () => info.lineDist * 2 / 3
+});
+
+const drawMeeting = (info: DrawingConfig, atX: number, meeting: MeetingSect) => matchString(info.meetingStyle, {
+    'Bar': () => drawBar(info, atX, meeting.from, meeting.to),
+    'Metro': () => drawMetroStation(info, atX, meeting.from, meeting.to),
+});
 
 const drawBar = (info: DrawingConfig, atX: number, from: number, to: number) => {
     const w = info.lineDist / 5;
@@ -83,7 +124,7 @@ const drawBar = (info: DrawingConfig, atX: number, from: number, to: number) => 
     return `M ${atX - w / 2} ${(from - 0.1) * info.lineDist} h ${w} v ${h} h ${-w} z`;
 }
 
-export const drawMetroStation = (info: DrawingConfig, atX: number, from: number, to: number) => {
+const drawMetroStation = (info: DrawingConfig, atX: number, from: number, to: number) => {
     const d = info.lineDist
     const r = d / 3;
     const s = 4 / 5 * r;
@@ -99,6 +140,12 @@ export const drawMetroStation = (info: DrawingConfig, atX: number, from: number,
         return `${pre} ${top} ${midR} ${bottom} ${midL} z`;
     }
 }
+
+const crossingMargin = (info: DrawingConfig, previous: Section['kind']) => matchString(previous, {
+    'empty': () => info.initialMargin,
+    'meeting': () => info.crossing2meetingMargin,
+    'block-crossing': () => info.crossing2crossingMargin,
+});
 
 export interface BcMetrics {
     info: DrawingConfig,
