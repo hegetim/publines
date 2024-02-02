@@ -10,7 +10,7 @@ export const StorylineSvg = (props: Props) => {
     const meeetingCommons = mkMeetingStyle(props.config.meetingStyle);
     return <svg viewBox={`-10 -10 ${width + 20} ${height + 20}`}>
         <g>
-            {...paths.map((cmds, i) => <path key={i} {...pathCommons} stroke={pkColors[i % pkColors.length]} d={cmds} />)}
+            {...paths.map((cmds, i) => <path key={i} {...pathCommons} stroke={selectColor(i)} d={cmds} />)}
         </g>
         <g>
             {...meetings.map((cmds, i) => <path key={i} {...meeetingCommons} d={cmds} />)}
@@ -23,7 +23,10 @@ const mkMeetingStyle = (style: MeetingStyle) => matchString(style, {
     'Metro': () => ({ stroke: "black", fill: "white", strokeWidth: 1 }),
 });
 
+const selectColor = (i: number) => pkColors[i === 0 ? 0 : (i - 1) % (pkColors.length - 1) + 1]; // assumes ego has idx 0
+
 const pkColors = [
+    '#808080', // PK dark gray
     '#e31a1c', // PK dark red
     '#1f78b4', // PK dark blue
     '#33a02c', // PK dark green
@@ -33,7 +36,6 @@ const pkColors = [
     '#a65628', // PK dark brown
     '#f781bf', // PK dark pink
     '#1b9e77', // PK dark cyan
-    //'#808080', // PK dark gray
 ]
 
 interface Props {

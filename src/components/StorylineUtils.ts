@@ -46,11 +46,13 @@ export interface EmptySect {
 
 export const mkSections = (story: Storyline, realization: SBCMRealization) => {
     let perm = realization.initialPermutation;
+    // console.log({ init: realization.initialPermutation })
     let [i, j] = [0, 0];
     const result: Section[] = []; // mutable :(
     while (true) {
         const meeting = story.meetings[i];
         if (meeting === undefined) {
+            // console.log({ result });
             return result;
         } else {
             const supported = supportsMeeting(perm, meeting)
@@ -73,7 +75,9 @@ export const mkSections = (story: Storyline, realization: SBCMRealization) => {
 }
 
 export const drawSections = (info: DrawingConfig, sections: Section[], initialPermutation: number[]) => {
-    const paths = new Array<string>(initialPermutation.length).fill("").map((_, i) => `M 0 ${i * info.lineDist}`);
+    const paths = new Array(initialPermutation.length);
+    initialPermutation.forEach((p, i) => paths[p] = `M 0 ${i * info.lineDist}`);
+    // console.log(`drawSections->initialPermutation: ${initialPermutation}`)
     const xBuf = new Array<[number, Section['kind']]>(initialPermutation.length).fill([0, 'empty']);
     // console.log({ paths, xBuf })
     const meetings: string[] = [];
@@ -91,6 +95,7 @@ export const drawSections = (info: DrawingConfig, sections: Section[], initialPe
                 Math.max(max, xBuf[i]![0] + crossingMargin(info, xBuf[i]![1])), 0);
             _.range(sect.bc[0], sect.bc[2] + 1).forEach(i => {
                 xBuf[i] = [x + bcWidth(metrics), sect.kind];
+                // console.log(`bc: ${sect.bc} index ${i} set path ${sect.perm[i - sect.bc[0]]}`)
                 paths[sect.perm[i - sect.bc[0]]!] += ` H ${x} ${drawSLine(metrics, i)}`;
             });
             // console.log({ sect, at: x })
@@ -124,6 +129,7 @@ const drawBar = (info: DrawingConfig, atX: number, from: number, to: number) => 
     return `M ${atX - w / 2} ${(from - 0.1) * info.lineDist} h ${w} v ${h} h ${-w} z`;
 }
 
+/// see ../../docu/metro-stations.pdf
 const drawMetroStation = (info: DrawingConfig, atX: number, from: number, to: number) => {
     const d = info.lineDist
     const r = d / 3;
@@ -147,6 +153,7 @@ const crossingMargin = (info: DrawingConfig, previous: Section['kind']) => match
     'block-crossing': () => info.crossing2crossingMargin,
 });
 
+/// see ../../docu/storylineUtils.pdf
 export interface BcMetrics {
     info: DrawingConfig,
     smallGroupAtTop: boolean,

@@ -12,3 +12,15 @@ export const matchByKind = <T extends { kind: K }, K extends string, R>(t: T, bo
 export const matchString = <K extends string, R>(k: K, body: { [P in K]: () => R }) => {
     return body[k]();
 }
+
+export function* windows<T>(array: T[], size: number) {
+    for (let i = 0; i + size <= array.length; i++) {
+        yield array.slice(i, i + size);
+    }
+}
+
+export function* windows2<T>(array: T[]) {
+    for (let i = 0; i + 2 <= array.length; i++) {
+        yield [array[i], array[i + 1]] as [T, T];
+    }
+}
