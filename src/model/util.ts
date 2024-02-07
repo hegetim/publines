@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 export const as = <T>(t: T): T => t
 
 export const assertExhaustive = (_: never): never => { throw TypeError("unreachable code") }
@@ -23,4 +25,11 @@ export function* windows2<T>(array: T[]) {
     for (let i = 0; i + 2 <= array.length; i++) {
         yield [array[i], array[i + 1]] as [T, T];
     }
+}
+
+export const cls = (...names: (string | { [index: string]: boolean })[]) => {
+    const joined = names.flatMap(name =>
+        _.isString(name) ? [name] : _.toPairs(name).filter(([_, flag]) => flag).map(([s, _]) => s)
+    ).join(" ");
+    return { className: joined };
 }
