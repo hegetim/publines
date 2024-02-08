@@ -1,5 +1,5 @@
 import { Author, Publication } from "./Metadata";
-import { as } from "./util";
+import { as } from "./Util";
 
 interface DblpAuthorSearch {
     result: {

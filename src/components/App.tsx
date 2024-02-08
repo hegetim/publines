@@ -1,48 +1,69 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import './App.css';
 import * as Dblp from '../model/Dblp';
-import { MainAuthor } from './MainAuthor';
-import { StorylineSvg } from './Storyline';
-import { as } from '../model/util';
-import { SBCMRealization, Storyline, oneSidedScm } from '../model/Sbcm';
-import { Author } from '../model/Metadata';
+import { Author, Publication } from '../model/Metadata';
 import { defaultConfig } from './StorylineUtils';
+import { MainAuthor } from './MainAuthor';
+import { StorylineComponent } from './StorylineComponent';
 
 const App = () => {
-  const fetchAuthors = (s: string) => Dblp.findAuthor(s)
-    .then(res => res === 'not_ok' || res === 'error' ? 'error' : Dblp.mkSuggestions(res));
+    const [config, _setConfig] = useState(defaultConfig(12)); // for later use
+    const [mainAuthor, setMainAuthor] = useState<Author | undefined>();
+    const [publications, setPublications] = useState<Publication[] | 'error' | undefined>();
 
-  const testStory = as<Storyline>({
-    authorIds: ['0', '1', '2', '3', '4', '5'], meetings: [[1, 2, 3, 4, 5], [0, 2, 3, 4, 5], [0, 2, 3, 5], [2, 5], [4, 1, 5]]
-  });
-  const testReal = as<SBCMRealization>({ initialPermutation: [0, 1, 2, 3, 4, 5], blockCrossings: [[0, 0, 1], [1, 3, 4], [3, 3, 4], [0, 1, 4]] });
-  const config = defaultConfig(12);
-
-  const [mainAuthor, setMainAuthor] = useState<Author | undefined>();
-
-  return (
-    <div className="App" >
-      <h1>Publines</h1>
-      <p className='intro-par'>Visualize joint publications with your coauthors over time.</p>
-      <button onClick={() => Dblp.findAuthor("alexander wolff").then(res => {
-        if (res === 'error' || res === 'not_ok') {
-          console.log('something went wrong');
+    const handleAuthorChanged = useCallback(async (author: Author) => {
+        const fetched = await Dblp.loadPublications(author.id);
+        if (fetched === 'error' || fetched === 'not_ok') {
+            setPublications('error');
         } else {
-          console.log(Dblp.mkSuggestions(res));
+            setPublications(Dblp.parsePublications(fetched.raw));
         }
-      })}>test</button>
-      <button onClick={() => Dblp.loadPublications("15/4314").then(res => {
-        if (res === 'error' || res === 'not_ok') {
-          console.log('something went wrong');
+        setMainAuthor(author);
+    }, [setPublications, setMainAuthor]);
+
+    const renderPublications = () => {
+        if (!publications || !mainAuthor) {
+            return [];
+        } else if (publications === 'error') {
+            return <span className='story-main-error'>Could not load publications</span>;
+        } else if (publications.length === 0) {
+            return <span className='story-main-empty'>{`${mainAuthor} has no publications`}</span>;
         } else {
-          console.log(Dblp.parsePublications(res.raw));
+            return <StorylineComponent drawingConfig={config} protagonist={mainAuthor} publications={publications} />
         }
-      })}>test2</button>
-      <MainAuthor author={mainAuthor} setAuthor={x => { setMainAuthor(x); console.log(x) }} fetchAuthors={fetchAuthors} />
-      <StorylineSvg config={config} realization={testReal} story={testStory} />
-      <StorylineSvg config={config} story={testStory} realization={oneSidedScm(testStory)} />
-    </div >
-  );
+    }
+
+    return (
+        <div className="App" >
+            <h1>Publines</h1>
+            <p className='intro-par'>Visualize joint publications with your coauthors over time.</p>
+            <MainAuthor author={mainAuthor} setAuthor={handleAuthorChanged} fetchAuthors={fetchAuthors} />
+            {renderPublications()}
+        </div >
+    );
 }
 
+const fetchAuthors = (s: string) => Dblp.findAuthor(s)
+    .then(res => res === 'not_ok' || res === 'error' ? 'error' : Dblp.mkSuggestions(res));
+
 export default App;
+
+// <button onClick={() => Dblp.findAuthor("alexander wolff").then(res => {
+//   if (res === 'error' || res === 'not_ok') {
+//     console.log('something went wrong');
+//   } else {
+//     console.log(Dblp.mkSuggestions(res));
+//   }
+// })}>test</button>
+// <button onClick={() => Dblp.loadPublications("15/4314").then(res => {
+//   if (res === 'error' || res === 'not_ok') {
+//     console.log('something went wrong');
+//   } else {
+//     console.log(Dblp.parsePublications(res.raw));
+//   }
+// })}>test2</button>
+
+// const testStory = as<Storyline>({
+//   authorIds: ['0', '1', '2', '3', '4', '5'], meetings: [[1, 2, 3, 4, 5], [0, 2, 3, 4, 5], [0, 2, 3, 5], [2, 5], [4, 1, 5]]
+// });
+// const testReal = as<SBCMRealization>({ initialPermutation: [0, 1, 2, 3, 4, 5], blockCrossings: [[0, 0, 1], [1, 3, 4], [3, 3, 4], [0, 1, 4]] });

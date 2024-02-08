@@ -1,14 +1,14 @@
 import React from "react"
 import { DrawingConfig, MeetingStyle, bcWidth, defaultConfig, drawSLine, drawSections, mkBcMetrics, mkSections } from "./StorylineUtils"
-import { Storyline, SBCMRealization } from "../model/Sbcm";
-import { matchString } from "../model/util";
+import { Storyline, SBCMRealization } from "../model/Storyline";
+import { matchString } from "../model/Util";
 
 export const StorylineSvg = (props: Props) => {
     const sections = mkSections(props.story, props.realization)!;
     const { paths, meetings, width, height } = drawSections(props.config, sections, props.realization.initialPermutation);
     const pathCommons = { fill: "none", strokeWidth: 1.5 };
     const meeetingCommons = mkMeetingStyle(props.config.meetingStyle);
-    return <svg viewBox={`-10 -10 ${width + 20} ${height + 20}`}>
+    return <svg className="story-main-svg" viewBox={`-10 -10 ${width + 20} ${height + 20}`}>
         <g>
             {...paths.map((cmds, i) => <path key={i} {...pathCommons} stroke={selectColor(i)} d={cmds} />)}
         </g>

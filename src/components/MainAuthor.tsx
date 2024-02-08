@@ -6,7 +6,7 @@ type FetchedAuthors = [string, Author][] | 'error'
 
 export const MainAuthor = (props: {
     author: Author | undefined,
-    setAuthor: (author: Author) => void,
+    setAuthor: (author: Author) => Promise<void> | void,
     fetchAuthors: (searchString: string) => Promise<FetchedAuthors>
 }) => {
     const [isEditing, setEditing] = useState(props.author === undefined);
@@ -18,9 +18,11 @@ export const MainAuthor = (props: {
         [props.fetchAuthors, setResultsList]
     );
 
-    useEffect(() => {
-        if (searchString !== '') { debouncedFetch(searchString); }
-    }, [debouncedFetch, searchString]);
+    const handleTyping = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const str = e.target.value;
+        if (str !== '') { debouncedFetch(str); }
+        setSearchString(str);
+    }, [debouncedFetch, setSearchString]);
 
     const renderMain = () => {
         if (!isEditing && props.author) {
@@ -31,9 +33,15 @@ export const MainAuthor = (props: {
         } else {
             return <React.Fragment>
                 <input className="author-name-input" type="search" value={searchString}
-                    onChange={e => setSearchString(e.target.value)} />
+                    onChange={handleTyping} />
                 <div className="author-results-container">
-                    {renderResults(resultsList, s => { setEditing(false); props.setAuthor(s); })}
+                    {resultsList === 'error' ?
+                        <span className="author-results-error">could not search for authors</span> :
+                        resultsList.map(([hint, author]) =>
+                            <div className="author-result-item" key={author.id} title={hint}
+                                onClick={() => { setEditing(false); props.setAuthor(author); }}>{hint}</div>
+                        )
+                    }
                 </div>
             </React.Fragment>;
         }
@@ -43,15 +51,4 @@ export const MainAuthor = (props: {
         <span className="author-name-label">Main author:</span>
         {renderMain()}
     </div>;
-}
-
-const renderResults = (resultsList: FetchedAuthors, setAuthor: (author: Author) => void) => {
-    if (resultsList === 'error') {
-        return <span className="author-results-error">could not search for authors</span>;
-    } else {
-        return resultsList.map(([hint, author]) =>
-            <div className="author-result-item" key={author.id}
-                onClick={() => setAuthor(author)} title={hint}>{hint}</div>
-        );
-    }
 }

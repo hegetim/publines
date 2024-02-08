@@ -1,6 +1,6 @@
 import _ from "lodash";
-import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "../model/Sbcm";
-import { as, assertExhaustive, matchString } from "../model/util";
+import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "../model/Storyline";
+import { as, assertExhaustive, matchString } from "../model/Util";
 
 export interface DrawingConfig {
     lineDist: number,
