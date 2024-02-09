@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = {
   entry: './src/index.tsx',
@@ -8,6 +9,7 @@ module.exports = {
       template: 'src/static/index.html',
       favicon: 'src/static/favicon.ico',
     }),
+    new MiniCssExtractPlugin(),
   ],
   module: {
     rules: [
@@ -18,7 +20,7 @@ module.exports = {
       },
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        use: [MiniCssExtractPlugin.loader, 'css-loader'],
       },
       {
         test: /\.(png|svg|jpg|jpeg|gif|ico)$/i,
@@ -31,7 +33,7 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
+    extensions: ['.tsx', '.ts', '.js', '.html', '.ico'],
   },
   output: {
     filename: 'bundle.js',
