@@ -1,0 +1,12 @@
+.story-main-container svg,
+.story-main-container div {
+    display: inline;
+}
+
+.story-main-container .story-svg-container {
+    overflow-x: scroll;
+}
+
+.story-main-container .story-y-labels {
+    margin: 0 1ex;
+}

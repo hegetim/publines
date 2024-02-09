@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import './App.css';
 import * as Dblp from '../model/Dblp';
 import { Author, Publication } from '../model/Metadata';
-import { defaultConfig } from './StorylineUtils';
+import { defaultConfig } from '../model/StorylineDrawings';
 import { MainAuthor } from './MainAuthor';
 import { StorylineComponent } from './StorylineComponent';
 import _ from 'lodash';

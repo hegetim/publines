@@ -1,3 +1,18 @@
 .App {
-  text-align: center;
+    display: grid;
+    grid-template-columns: minmax(2rem, 1fr) minmax(4fr, 1600px) minmax(2rem, 1fr);
+}
+
+.App h1,
+.App p,
+.App .author-name-container {
+    grid-column: 2;
+}
+
+.App .story-main-container {
+    grid-column: 1 / span 3;
+    justify-self: center;
+    margin-top: 2ex;
+    display: grid;
+    grid-template-columns: auto 1fr;
 }

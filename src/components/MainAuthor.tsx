@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Author } from "../model/Metadata";
+import "./MainAuthor.css"
 import _ from "lodash";
 
 type FetchedAuthors = [string, Author][] | 'error'
@@ -26,10 +27,10 @@ export const MainAuthor = (props: {
 
     const renderMain = () => {
         if (!isEditing && props.author) {
-            return <React.Fragment>
+            return <div className="author-name-ready">
                 <span className="main-author-label">{props.author.name}</span>
                 <div className="author-edit-btn" onClick={() => setEditing(true)}>edit</div>
-            </React.Fragment>;
+            </div>;
         } else {
             return <React.Fragment>
                 <input className="author-name-input" type="search" value={searchString}

@@ -24,7 +24,7 @@ export const mkStoryline = (
         const meeting = publ.authors
             .map(contributor => orderedAuthors.indexOf(contributor.id))
             .filter(idx => idx >= 0);
-        meetings.push(_.sortBy(meeting));
+        if (meeting.length > 0) { meetings.push(_.sortBy(meeting)); }
     }
     const allAuthors = new Map([...authors].map(([id, [author, _1]]) => [id, author]));
     allAuthors.set(protagonist.id, protagonist);
