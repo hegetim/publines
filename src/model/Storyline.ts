@@ -6,22 +6,34 @@ export interface Storyline {
     meetings: number[][],
 }
 
-export const mkStoryline = (publications: Publication[]): Storyline => {
-    let authors: Map<string, Author> = new Map();
-    for (const publ of publications) {
-        for (const contributor of publ.authors) {
-            if (!authors.has(contributor.id)) {
-                authors.set(contributor.id, contributor);
-            }
-        }
-    }
-    const orderedAuthors = [...authors.keys()];
+export const mkStoryline = (
+    publications: Publication[],
+    protagonist: Author,
+    limit: number,
+): [Storyline, Map<string, Author>] => {
+    let authors: Map<string, [Author, number]> = new Map();
+    publications.flatMap(p => p.authors).forEach(contributor => {
+        const tmp = authors.get(contributor.id);
+        if (tmp) { authors.set(contributor.id, [tmp[0], tmp[1] + 1]); }
+        else { authors.set(contributor.id, [contributor, 1]); }
+    });
+    authors.delete(protagonist.id);
+    const orderedAuthors = [protagonist.id, ...(mostFrequentKeys(authors, limit))];
     let meetings: number[][] = [];
     for (const publ of publications) {
-        const meeting = publ.authors.map(contributor => orderedAuthors.indexOf(contributor.id));
-        meetings.push(meeting.toSorted((a, b) => b - a));
+        const meeting = publ.authors
+            .map(contributor => orderedAuthors.indexOf(contributor.id))
+            .filter(idx => idx >= 0);
+        meetings.push(_.sortBy(meeting));
     }
-    return { authorIds: orderedAuthors, meetings };
+    const allAuthors = new Map([...authors].map(([id, [author, _1]]) => [id, author]));
+    allAuthors.set(protagonist.id, protagonist);
+    return [{ authorIds: orderedAuthors, meetings }, allAuthors];
+}
+
+const mostFrequentKeys = <K, T>(map: Map<K, [T, number]>, limit: number) => {
+    if (limit < 0) { return [...map.keys()]; }
+    else { return _.sortBy([...map], ([_0, [_1, n]]) => -n).slice(0, limit).map(t => t[0]); }
 }
 
 export type BlockCrossings = [number, number, number][];

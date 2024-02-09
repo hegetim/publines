@@ -1,16 +1,20 @@
 import _ from "lodash";
 import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "../model/Storyline";
-import { as, assertExhaustive, matchString } from "../model/Util";
+import { as, assertExhaustive, calcTextSize, matchByKind, matchString } from "../model/Util";
 
 export interface DrawingConfig {
     lineDist: number,
     stretch: number,
     meetingStyle: MeetingStyle,
+    enumerateMeetings: undefined | 'x' | '[x]' | 'x.',
+    xAxisPos: 'top' | 'bottom',
     crossing2crossingMargin: number,
     crossing2meetingMargin: number,
     meeting2meetingMargin: number,
     initialMargin: number,
     finalMargin: number,
+    xAxisLabelMargin: number,
+    labelLineSpacing: number,
 }
 
 export const defaultConfig = (lineDist: number) => as<DrawingConfig>({
@@ -21,15 +25,47 @@ export const defaultConfig = (lineDist: number) => as<DrawingConfig>({
     crossing2crossingMargin: lineDist / 4,
     crossing2meetingMargin: lineDist / 4,
     meeting2meetingMargin: lineDist / 2,
-    meetingStyle: 'Metro',
+    xAxisLabelMargin: lineDist / 2,
+    meetingStyle: {
+        kind: 'Metro',
+        relWidth: 2 / 3,
+        relStrapSize: 2 / 5,
+    },
+    enumerateMeetings: 'x',
+    xAxisPos: 'bottom',
+    labelLineSpacing: 1.2,
 });
 
-export type MeetingStyle = 'Bar' | 'Metro'
+export type MeetingStyle = {
+    kind: 'Bar',
+    relWidth: number,
+    relExcess: number,
+} | {
+    kind: 'Metro',
+    relWidth: number,
+    relStrapSize: number,
+}
+
+export interface BBox {
+    top: number,
+    left: number,
+    width: number,
+    height: number,
+}
+
+export interface ProtoLabel<K extends string> {
+    kind: K,
+    x: number,
+    y: number,
+    text: string,
+}
 
 export type Section = MeetingSect | BlockCrossingSect | EmptySect
 
 export interface MeetingSect {
     kind: 'meeting',
+    ordinal: number,
+    xTickLabel: string | undefined,
     from: number,
     to: number,
 }
@@ -44,7 +80,7 @@ export interface EmptySect {
     kind: 'empty'
 }
 
-export const mkSections = (story: Storyline, realization: SBCMRealization) => {
+export const mkSections = (story: Storyline, realization: SBCMRealization, labels: string[]) => {
     let perm = realization.initialPermutation;
     // console.log({ init: realization.initialPermutation })
     let [i, j] = [0, 0];
@@ -57,7 +93,7 @@ export const mkSections = (story: Storyline, realization: SBCMRealization) => {
         } else {
             const supported = supportsMeeting(perm, meeting)
             if (supported !== false) {
-                result.push({ kind: 'meeting', ...supported });
+                result.push({ kind: 'meeting', ordinal: i, xTickLabel: labels[i], ...supported });
                 i += 1;
             } else {
                 const nextBc = realization.blockCrossings[j];
@@ -75,36 +111,61 @@ export const mkSections = (story: Storyline, realization: SBCMRealization) => {
 }
 
 export const drawSections = (info: DrawingConfig, sections: Section[], initialPermutation: number[]) => {
-    const paths = new Array(initialPermutation.length);
+    const paths = new Array<string>(initialPermutation.length);
     initialPermutation.forEach((p, i) => paths[p] = `M 0 ${i * info.lineDist}`);
-    // console.log(`drawSections->initialPermutation: ${initialPermutation}`)
+
     const xBuf = new Array<[number, Section['kind']]>(initialPermutation.length).fill([0, 'empty']);
-    // console.log({ paths, xBuf })
+    let [enumLabelBuf, tickLabelBuf]: [number, [number, string]] = [0, [0, '']];
+
     const meetings: string[] = [];
+    const labels: ProtoLabel<'enum' | 'tick'>[] = [];
+
+    const { enumLabelY, tickLabelY, labelHight } = labelYPos(info, initialPermutation.length - 1);
+
     for (const sect of sections) {
         if (sect.kind === 'empty') { /* ignore it */ }
         else if (sect.kind === 'meeting') {
-            const x = _.range(sect.from, sect.to + 1).reduce((max, i) =>
-                Math.max(max, xBuf[i]![0] + meetingMargin(info, xBuf[i]![1]) + meetingWidth(info) / 2), 0);
+            const enumeratedLabel = mkEnumeratedLabel(info, sect.ordinal);
+            const ignoreTickLabel = !sect.xTickLabel || tickLabelBuf[1] === sect.xTickLabel;
+            const [enumLWidth, tickLWidth] = [labelWidth(enumeratedLabel), labelWidth(sect.xTickLabel)];
+            const x = Math.max(
+                ..._.range(sect.from, sect.to + 1)
+                    .map(i => xBuf[i]![0] + meetingMargin(info, xBuf[i]![1]) + meetingWidth(info) / 2),
+                enumLabelBuf + info.xAxisLabelMargin + enumLWidth / 2,
+                tickLabelBuf[0] + (ignoreTickLabel ? 0 : info.xAxisLabelMargin + tickLWidth / 2),
+            );
+
             _.range(sect.from, sect.to + 1).forEach(i => xBuf[i] = [x + meetingWidth(info) / 2, sect.kind]);
+            enumLabelBuf = x + enumLWidth / 2;
+            tickLabelBuf = [x + (ignoreTickLabel ? 0 : tickLWidth / 2), sect.xTickLabel ?? tickLabelBuf[1]];
+
             meetings.push(drawMeeting(info, x, sect));
-            // console.log({ sect, at: x })
+            if (enumeratedLabel) {
+                labels.push({ kind: 'enum', x, y: enumLabelY, text: enumeratedLabel });
+            }
+            if (!ignoreTickLabel && sect.xTickLabel) {
+                labels.push({ kind: 'tick', x, y: tickLabelY, text: sect.xTickLabel });
+            }
         } else if (sect.kind === 'block-crossing') {
             const metrics = mkBcMetrics(info, ...sect.bc);
             const x = _.range(sect.bc[0], sect.bc[2] + 1).reduce((max, i) =>
                 Math.max(max, xBuf[i]![0] + crossingMargin(info, xBuf[i]![1])), 0);
             _.range(sect.bc[0], sect.bc[2] + 1).forEach(i => {
                 xBuf[i] = [x + bcWidth(metrics), sect.kind];
-                // console.log(`bc: ${sect.bc} index ${i} set path ${sect.perm[i - sect.bc[0]]}`)
                 paths[sect.perm[i - sect.bc[0]]!] += ` H ${x} ${drawSLine(metrics, i)}`;
             });
-            // console.log({ sect, at: x })
         } else { assertExhaustive(sect); }
     }
-    const width = Math.max(...xBuf.map(x => x[0])) + info.finalMargin;
-    const height = initialPermutation.length * info.lineDist;
-    paths.forEach((_, i, self) => self[i] += ` H ${width}`);
-    return { paths, meetings, width, height };
+
+    const bbox: BBox = {
+        width: Math.max(...xBuf.map(x => x[0]), enumLabelBuf, tickLabelBuf[0]) + info.finalMargin,
+        height: (initialPermutation.length - 1) * info.lineDist + labelHight,
+        left: 0,
+        top: info.xAxisPos === 'top' ? -labelHight : 0,
+    }
+    paths.forEach((_, i, self) => self[i] += ` H ${bbox.width}`);
+
+    return { paths, meetings, labels, bbox };
 }
 
 const meetingMargin = (info: DrawingConfig, previous: Section['kind']) => matchString(previous, {
@@ -113,27 +174,23 @@ const meetingMargin = (info: DrawingConfig, previous: Section['kind']) => matchS
     'block-crossing': () => info.crossing2meetingMargin,
 });
 
-const meetingWidth = (info: DrawingConfig) => matchString(info.meetingStyle, {
-    'Bar': () => info.lineDist / 5,
-    'Metro': () => info.lineDist * 2 / 3
+const meetingWidth = (info: DrawingConfig) => info.lineDist * info.meetingStyle.relWidth
+
+const drawMeeting = (info: DrawingConfig, atX: number, meeting: MeetingSect): string => matchByKind(info.meetingStyle, {
+    'Bar': bar => drawBar(info.lineDist, bar.relWidth, bar.relExcess, atX, meeting.from, meeting.to),
+    'Metro': metro => drawMetroStation(info.lineDist, metro.relWidth, metro.relStrapSize, atX, meeting.from, meeting.to),
 });
 
-const drawMeeting = (info: DrawingConfig, atX: number, meeting: MeetingSect) => matchString(info.meetingStyle, {
-    'Bar': () => drawBar(info, atX, meeting.from, meeting.to),
-    'Metro': () => drawMetroStation(info, atX, meeting.from, meeting.to),
-});
-
-const drawBar = (info: DrawingConfig, atX: number, from: number, to: number) => {
-    const w = info.lineDist / 5;
-    const h = (to - from + 0.2) * info.lineDist;
-    return `M ${atX - w / 2} ${(from - 0.1) * info.lineDist} h ${w} v ${h} h ${-w} z`;
+const drawBar = (dist: number, relWidth: number, relExcess: number, atX: number, from: number, to: number) => {
+    const w = dist * relWidth;
+    const h = (to - from + 2 * relExcess) * dist;
+    return `M ${atX - w / 2} ${(from - relExcess) * dist} h ${w} v ${h} h ${-w} z`;
 }
 
 /// see ../../docu/metro-stations.pdf
-const drawMetroStation = (info: DrawingConfig, atX: number, from: number, to: number) => {
-    const d = info.lineDist
-    const r = d / 3;
-    const s = 4 / 5 * r;
+const drawMetroStation = (d: number, relW: number, relS: number, atX: number, from: number, to: number) => {
+    const r = d * relW / 2;
+    const s = 2 * r * relS;
     const t = Math.sqrt(r * r - s * s / 4);
     const pre = `M ${atX - s / 2} ${from * d + t}`;
     if (from === to) {
@@ -152,6 +209,27 @@ const crossingMargin = (info: DrawingConfig, previous: Section['kind']) => match
     'meeting': () => info.crossing2meetingMargin,
     'block-crossing': () => info.crossing2crossingMargin,
 });
+
+const mkEnumeratedLabel = (info: DrawingConfig, i: number) =>
+    !info.enumerateMeetings ? undefined : matchString(info.enumerateMeetings, {
+        'x': () => i.toString(),
+        'x.': () => `${i}.`,
+        '[x]': () => `[${i}]`,
+    });
+
+const labelYPos = (info: DrawingConfig, n: number) => {
+    const text = calcTextSize("ÅAgç");
+    const enumLabelOffset = info.xAxisLabelMargin;
+    const tickLabelOffset = info.xAxisLabelMargin + (info.enumerateMeetings ? info.labelLineSpacing : 0) * text.height;
+    const [enumLabelY, tickLabelY] = matchString(info.xAxisPos, {
+        'top': () => [-enumLabelOffset - text.height - text.y, -tickLabelOffset - text.height - text.y],
+        'bottom': () => [n * info.lineDist + enumLabelOffset - text.y, n * info.lineDist + tickLabelOffset - text.y],
+    });
+    const labelHight = info.xAxisLabelMargin + (info.enumerateMeetings ? info.labelLineSpacing + 1 : 1) * text.height;
+    return { enumLabelY, tickLabelY, labelHight };
+}
+
+const labelWidth = (s: string | undefined) => s ? calcTextSize(s).width : 0;
 
 /// see ../../docu/storylineUtils.pdf
 export interface BcMetrics {

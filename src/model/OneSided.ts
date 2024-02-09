@@ -42,7 +42,7 @@ export const oneSidedScm = (story: Storyline): SBCMRealization => {
         const s3 = _.difference(m2, m1);
         const s4 = _.difference(_.range(0, story.authorIds.length), _.union(m1, m2));
         const iPerm = inverted(perm);
-        for (const c of _.sortBy(s1, [i => iPerm[i]!])) {
+        for (const c of _.sortBy(s1, i => iPerm[i]!)) {
             let i = iPerm[c]!;
             while (i > 0 && s2.includes(perm[i - 1]!)) {
                 cross(perm, iPerm, i - 1);
@@ -51,7 +51,7 @@ export const oneSidedScm = (story: Storyline): SBCMRealization => {
                 i -= 1;
             }
         }
-        for (const c of _.sortBy(s3, [i => iPerm[i]!])) {
+        for (const c of _.sortBy(s3, i => iPerm[i]!)) {
             let i = iPerm[c]!;
             while (i > 0 && s4.includes(perm[i - 1]!)) {
                 cross(perm, iPerm, i - 1);

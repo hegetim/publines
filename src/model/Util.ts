@@ -45,7 +45,7 @@ export const calcTextSize = (() => {
     const textNode = svg.firstChild! as SVGTextElement;
     return (text: string) => {
         textNode.textContent = text;
-        return { width: textNode.getComputedTextLength(), height: textNode.clientHeight };
+        return textNode.getBBox();
     };
 })();
 

@@ -5,9 +5,10 @@ import { Author, Publication } from '../model/Metadata';
 import { defaultConfig } from './StorylineUtils';
 import { MainAuthor } from './MainAuthor';
 import { StorylineComponent } from './StorylineComponent';
+import _ from 'lodash';
 
 const App = () => {
-    const [config, _setConfig] = useState(defaultConfig(12)); // for later use
+    const [config, _setConfig] = useState(defaultConfig(24)); // for later use
     const [mainAuthor, setMainAuthor] = useState<Author | undefined>();
     const [publications, setPublications] = useState<Publication[] | 'error' | undefined>();
 
@@ -16,7 +17,10 @@ const App = () => {
         if (fetched === 'error' || fetched === 'not_ok') {
             setPublications('error');
         } else {
-            setPublications(Dblp.parsePublications(fetched.raw));
+            let parsed: Publication[] | 'error' = Dblp.parsePublications(fetched.raw);
+            if (parsed !== 'error') { parsed = _.sortBy(parsed, p => p.year); }
+            console.log(parsed);
+            setPublications(parsed);
         }
         setMainAuthor(author);
     }, [setPublications, setMainAuthor]);
