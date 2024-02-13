@@ -26,8 +26,9 @@ export const StorylineComponent = (props: {
     const mainRef = useRef<MainSVGRef | null>(null);
     const [scrollPos, setScrollPos] = useState(0);
 
-    const pathYPos = useCallback(
-        (i: number, rsp: number) => mainRef.current?.getPathPos(i, rsp)?.y ?? (i * props.drawingConfig.lineDist), // this is wrong before the 1st scroll event!
+    const pathYPos = useCallback((i: number, rsp: number) =>
+        mainRef.current?.getPathPos(i, rsp)?.y ??
+        (realization.initialPermutation.indexOf(i) * props.drawingConfig.lineDist),
         [mainRef, props.drawingConfig],
     );
     const debouncedScroll = useCallback(_.debounce(setScrollPos, 250), [setScrollPos]);
@@ -53,8 +54,23 @@ const pkColors = [
     '#33a02c', // PK dark green
     '#ff7f00', // PK dark orange
     '#6a3d9a', // PK dark purple
-    '#ffff33', // PK dark yellow
+    // '#ffff33', // PK dark yellow
+    '#b2df8a', // PK light green
     '#a65628', // PK dark brown
     '#f781bf', // PK dark pink
     '#1b9e77', // PK dark cyan
+    '#a6cee3', // PK light blue
 ]
+
+/*  light colors:
+PK light red    #fb9a99
+PK light blue   #a6cee3
+PK light green  #b2df8a
+PK light orange #fdbf6f
+PK light purple #cab2d6
+PK light yellow #ffffcc
+PK light brown  #e5d8bd
+PK light pink   #fddaec
+PK light cyan   #8dd3c7
+PK light gray   #cccccc
+*/
