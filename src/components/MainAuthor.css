@@ -10,4 +10,26 @@
 .author-name-container .author-edit-btn {
     display: inline;
     margin: 0px 1ex;
+    cursor: pointer;
+}
+
+.author-name-container .main-author-label {
+    font-weight: bold;
+}
+
+.author-name-container .author-results-container {
+    display: block;
+    width: 100%;
+    margin: 1ex 0 0 2ex;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    max-height: 50vh;
+}
+
+.author-name-container .author-result-item {
+    cursor: pointer;
+}
+
+.author-name-container .author-result-item:hover {
+    background-color: #8dd3c7;
 }

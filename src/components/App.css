@@ -1,6 +1,6 @@
 .App {
     display: grid;
-    grid-template-columns: minmax(2rem, 1fr) minmax(4fr, 1600px) minmax(2rem, 1fr);
+    grid-template-columns: minmax(4rem, 1fr) minmax(0, 1200px) minmax(4rem, 1fr);
 }
 
 .App h1,
