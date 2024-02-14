@@ -40,7 +40,7 @@ export type BlockCrossings = [number, number, number][];
 
 export interface SBCMRealization {
     initialPermutation: number[],
-    blockCrossings: BlockCrossings,
+    blockCrossings: BlockCrossings[],
 }
 
 export const applyBc = (perm: number[], a: number, b: number, c: number) =>

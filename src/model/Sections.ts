@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "./Storyline";
 
 export type Section = MeetingSect | BlockCrossingSect | EmptySect
@@ -23,29 +24,22 @@ export interface EmptySect {
 export const mkSections = (story: Storyline, realization: SBCMRealization, labels: string[]) => {
     let perm = realization.initialPermutation;
     console.log({ init: realization.initialPermutation, story })
-    let [i, j] = [0, 0];
     const result: Section[] = []; // mutable :(
-    while (true) {
-        const meeting = story.meetings[i];
-        if (meeting === undefined) {
-            // console.log({ result });
-            return result;
+    _.zip(story.meetings, realization.blockCrossings).forEach(([meeting, blockCrossings], ordinal) => {
+        if (!meeting) {
+            console.warn('excess block crossings');
+            return;
+        } else if (!blockCrossings) {
+            console.warn(`undefined sequence of block crossings before meeting ${meeting} treated as empty`);
         } else {
-            const supported = supportsMeeting(perm, meeting)
-            if (supported !== false) {
-                result.push({ kind: 'meeting', ordinal: i, xTickLabel: labels[i], ...supported });
-                i += 1;
-            } else {
-                const nextBc = realization.blockCrossings[j];
-                if (nextBc === undefined) {
-                    console.error(`no block crossing left but meeting ${meeting} is unsupported`);
-                    return undefined;
-                } else {
-                    result.push({ kind: 'block-crossing', bc: nextBc, perm: perm.slice(nextBc[0], nextBc[2] + 1) });
-                    j += 1;
-                    perm = applyBc(perm, ...nextBc);
-                }
-            }
+            blockCrossings.forEach(bc => {
+                result.push({ kind: 'block-crossing', bc, perm: perm.slice(bc[0], bc[2] + 1) });
+                perm = applyBc(perm, ...bc);
+            });
         }
-    }
+        const supported = supportsMeeting(perm, meeting)
+        if (!supported) { throw new Error(`meeting ${meeting} is unsupported by <${perm}>`); }
+        result.push({ kind: 'meeting', ordinal, xTickLabel: labels[ordinal], ...supported });
+    });
+    return result;
 }

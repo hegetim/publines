@@ -33,10 +33,14 @@ export const oneSidedScm = (story: Storyline): SBCMRealization => {
     const initialPermutation = _.range(0, story.authorIds.length).sort(compareAttendance(story));
     // console.log({ initialPermutation });
     let perm = [...initialPermutation];
-    const blockCrossings: BlockCrossings = [];
+    const blockCrossings: BlockCrossings[] = [[]]; // first meeting is always supported
     for (const [m1, m2] of windows2(story.meetings)) {
         // console.log({ m1, m2, supported: supportsMeeting(perm, m2) });
-        if (supportsMeeting(perm, m2)) { continue; }
+        const newCrossings: BlockCrossings = [];
+        if (supportsMeeting(perm, m2)) {
+            blockCrossings.push(newCrossings);
+            continue;
+        }
         const s1 = _.intersection(m1, m2);
         const s2 = _.difference(m1, m2);
         const s3 = _.difference(m2, m1);
@@ -46,7 +50,7 @@ export const oneSidedScm = (story: Storyline): SBCMRealization => {
             let i = iPerm[c]!;
             while (i > 0 && s2.includes(perm[i - 1]!)) {
                 cross(perm, iPerm, i - 1);
-                blockCrossings.push([i - 1, i - 1, i]);
+                newCrossings.push([i - 1, i - 1, i]);
                 // console.log(`crossing ${i - 1} and ${i}`);
                 i -= 1;
             }
@@ -55,17 +59,18 @@ export const oneSidedScm = (story: Storyline): SBCMRealization => {
             let i = iPerm[c]!;
             while (i > 0 && s4.includes(perm[i - 1]!)) {
                 cross(perm, iPerm, i - 1);
-                blockCrossings.push([i - 1, i - 1, i]);
+                newCrossings.push([i - 1, i - 1, i]);
                 // console.log(`crossing ${i - 1} and ${i}`);
                 i -= 1;
             }
         }
         if (s2.length > 0 && s3.length > 0) {
             const finalBc: [number, number, number] = [s1.length, m1.length - 1, m2.length + s2.length - 1];
-            blockCrossings.push(finalBc);
+            newCrossings.push(finalBc);
             perm = applyBc(perm, ...finalBc);
             // console.log(`block crossing ${finalBc}`);
         }
+        blockCrossings.push(newCrossings);
     }
     return { initialPermutation, blockCrossings };
 }
