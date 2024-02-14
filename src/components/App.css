@@ -1,6 +1,17 @@
 .App {
     display: grid;
-    grid-template-columns: minmax(4rem, 1fr) minmax(0, 1200px) minmax(4rem, 1fr);
+}
+
+@media (width > 1200px) {
+    .App {
+        grid-template-columns: minmax(4rem, 1fr) minmax(0, 1200px) minmax(4rem, 1fr);
+    }
+}
+
+@media (width <=1200px) {
+    .App {
+        grid-template-columns: minmax(1rem, 1fr) minmax(0, 1200px) minmax(1rem, 1fr);
+    }
 }
 
 .App h1,

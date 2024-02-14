@@ -83,7 +83,7 @@ export const drawSections = (info: DrawingConfig, sections: Section[], initialPe
     for (const sect of sections) {
         if (sect.kind === 'empty') { /* ignore it */ }
         else if (sect.kind === 'meeting') {
-            const enumeratedLabel = mkEnumeratedLabel(info, sect.ordinal);
+            const enumeratedLabel = mkEnumeratedLabel(info, sect.ordinal + 1);
             const ignoreTickLabel = !sect.xTickLabel || tickLabelBuf[1] === sect.xTickLabel;
             const [enumLWidth, tickLWidth] = [labelWidth(enumeratedLabel), labelWidth(sect.xTickLabel)];
             const x = Math.max(
