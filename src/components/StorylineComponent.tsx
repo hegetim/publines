@@ -1,9 +1,9 @@
 import React, { useCallback, useRef, useState } from "react"
 import _ from "lodash"
 import { Author, Publication, filterInformal } from "../model/Metadata"
-import { DrawingConfig, drawSections } from "../model/StorylineDrawings"
+import { DrawingConfig, DrawingResult, drawSections } from "../model/StorylineDrawings"
 import { mkSections } from "../model/Sections"
-import { mkStoryline } from "../model/Storyline"
+import { SBCMRealization, mkStoryline } from "../model/Storyline"
 import { oneSidedScm } from "../model/OneSided"
 import { StorylineSvg, SelfRef as MainSVGRef } from "./StorylineSvg"
 import { StorylineYTickLabels } from "./StorylineYTickLabels"
@@ -23,26 +23,40 @@ export const StorylineComponent = (props: {
     const sections = mkSections(story, realization, meetingTickLabels)!;
     const drawn = drawSections(props.drawingConfig, sections, realization.initialPermutation);
 
+    return <div className="story-main-container">
+        <InnerComponent authorNames={authorNames} drawingConfig={props.drawingConfig} drawn={drawn}
+            meetingTitles={filtered.map(p => p.title)} realization={realization} />
+    </div>
+}
+
+/// separate so that we do not recalculate the whole storyline on each scroll...
+const InnerComponent = (props: {
+    realization: SBCMRealization,
+    drawingConfig: DrawingConfig,
+    authorNames: string[],
+    drawn: DrawingResult,
+    meetingTitles: string[],
+}) => {
     const mainRef = useRef<MainSVGRef | null>(null);
     const [scrollPos, setScrollPos] = useState(0);
 
     const pathYPos = useCallback((i: number, rsp: number) =>
         mainRef.current?.getPathPos(i, rsp)?.y ??
-        (realization.initialPermutation.indexOf(i) * props.drawingConfig.lineDist),
+        (props.realization.initialPermutation.indexOf(i) * props.drawingConfig.lineDist),
         [mainRef, props.drawingConfig],
     );
     const debouncedScroll = useCallback(_.debounce(setScrollPos, 250), [setScrollPos]);
     const handleScroll = useCallback((ev: React.UIEvent<HTMLDivElement>) =>
         debouncedScroll(ev.currentTarget.scrollLeft / ev.currentTarget.scrollWidth), [debouncedScroll]);
 
-    return <div className="story-main-container">
-        <StorylineYTickLabels labels={authorNames} mainBBox={drawn.bbox} colors={selectColor}
+    return <React.Fragment>
+        <StorylineYTickLabels labels={props.authorNames} mainBBox={props.drawn.bbox} colors={selectColor}
             relativeScrollPos={scrollPos} pathYPos={pathYPos} />
         <div className="story-svg-container" onScroll={handleScroll}>
-            <StorylineSvg ref={el => mainRef.current = el} config={props.drawingConfig} drawn={drawn}
-                authorNames={authorNames} meetingTitles={filtered.map(p => p.title)} />
+            <StorylineSvg ref={el => mainRef.current = el} config={props.drawingConfig} drawn={props.drawn}
+                authorNames={props.authorNames} meetingTitles={props.meetingTitles} />
         </div>
-    </div>
+    </React.Fragment>
 }
 
 export const selectColor = (i: number) => pkColors[i === 0 ? 0 : (i - 1) % (pkColors.length - 1) + 1]!; // assumes ego has idx 0
