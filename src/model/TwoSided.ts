@@ -1,5 +1,7 @@
 import _ from "lodash";
-import { SBCMRealization, Storyline } from "./Storyline";
+import { tail } from "./Util";
+import { BlockCrossings, SBCMRealization, Storyline } from "./Storyline";
+import { oneSidedScm } from "./OneSided";
 
 const lightestEdge = (m: number[][]): [number, number, number] => {
     let [min, minCol, minRow] = [Infinity, -1, -1];
@@ -12,10 +14,10 @@ const lightestEdge = (m: number[][]): [number, number, number] => {
 }
 
 const contract = (m: number[][], n: number, a: number, b: number) => {
-    _.range(0, a).forEach(i => { m[a]![i] += m[b]![i]!; });
+    _.range(0, a).forEach(i => m[a]![i] += m[b]![i]!);
     _.range(a + 1, b).forEach(i => { if (m[i]![a]) { m[i]![a] += m[b]![i]!; } });
     _.range(b + 1, n).forEach(i => {
-        if (m[i]![a]) {
+        if (m[i]![a] !== undefined) {
             m[i]![a] += m[i]![b]!;
             m[i]![b] = Infinity;
         }
@@ -24,12 +26,15 @@ const contract = (m: number[][], n: number, a: number, b: number) => {
 }
 
 const maxCutGreedyEC = (m: number[][], n: number): [number, number[], number[]] => {
+    console.log(m.map(r => r.join(",")).join('\n'));
     const l = _.range(0, n).map(i => [i]);
-    for (let i of _.range(0, n - 2)) {
+    for (let _0 of _.range(0, n - 2)) {
         const [_1, a, b] = lightestEdge(m); // a < b!
         contract(m, n, a, b);
         l[a] = [...l[a]!, ...l[b]!];
         l[b] = [];
+        console.log(`contracted ${b} into ${a} size ${n}`);
+        console.log(m.map(r => r.join(",")).join('\n'));
     }
     const [w, a, b] = lightestEdge(m);
     return [w, l[a]!, l[b]!];
@@ -55,43 +60,39 @@ const countCrossings = (a: boolean[], b: boolean[], n: number) => {
             }
         }
     })
-    return rem;
+    return res;
 }
 
 const mkCrossingMatrix = (story: Storyline) => {
     const n = story.authorIds.length;
-    const att: boolean[][] = new Array(n).fill([]);
-    story.meetings.forEach((m, i) => m.forEach(j => att[i]![j] = true));
-    const m: number[][] = new Array(n).fill([]);
+    const att: boolean[][] = Array.from({ length: n }, _ => []);
+    story.meetings.forEach((m, i) => m.forEach(j => att[j]![i] = true));
+    console.log(att.map(r => r.join(",")).join('\n'));
+    const m: number[][] = Array.from({ length: n }, _ => []);
     for (let i of _.range(0, n)) {
         for (let j of _.range(0, i)) {
-            m[i]![j] = countCrossings(att[i]!, att[j]!, n);
+            m[i]![j] = countCrossings(att[i]!, att[j]!, story.meetings.length);
         }
     }
-    return m;
+    console.log({ note: 'the crossing matrix', story, n, m, att })
+    return m.map(row => [...row]);
 }
-// const m = mkCrossingMatrix(story);
-// const [_0, top, bottom] = maxCutGreedyEC(m, story.authorIds.length);
 
-const splitStory = (story: Storyline, top: number[], bottom: number[]): [Storyline, Storyline] => {
+const splitStory = (story: Storyline, top: number[], bottom: number[]): [Storyline, number, Storyline, number] => {
     _.pull(top, 0); _.pull(bottom, 0);
-    const topStory: Storyline = {
-        authorIds: top.map(i => story.authorIds[i]!),
-        meetings: story.meetings.map(m => _.without(m, ...bottom)),
-    };
-    const bottomStory: Storyline = {
-        authorIds: bottom.map(i => story.authorIds[i]!),
-        meetings: story.meetings.map(m => _.without(m, ...top)),
-    };
-    return [topStory, bottomStory];
+    const topStory: Storyline = { ...story, meetings: story.meetings.map(m => _.without(m, ...bottom)) };
+    const bottomStory: Storyline = { ...story, meetings: story.meetings.map(m => _.without(m, ...top)) };
+    return [topStory, top.length + 1, bottomStory, bottom.length + 1];
 }
 
 const mergeRealizations = (top: SBCMRealization, bottom: SBCMRealization): SBCMRealization => {
     const flippedTop = flipRealization(top);
+    const topSize = top.initialPermutation.length;
+    console.log({ note: 'merging sbcm realizations', flippedTop, bottom })
     return {
         initialPermutation: [...flippedTop.initialPermutation, ...bottom.initialPermutation.slice(1)],
         blockCrossings: _.zip(flippedTop.blockCrossings, bottom.blockCrossings)
-            .map(([top, bot]) => _.concat(top!, bot!))
+            .map(([top, bot]) => _.concat(top!, moveBlockCrossings(bot!, topSize - 1))),
     };
 }
 
@@ -101,4 +102,17 @@ const flipRealization = (real: SBCMRealization): SBCMRealization => {
         initialPermutation: real.initialPermutation.toReversed(),
         blockCrossings: real.blockCrossings.map(bcs => bcs.map(([a, b, c]) => [n - c - 1, n - b - 2, n - a - 1])),
     };
+}
+
+const moveBlockCrossings = (bcs: BlockCrossings, by: number): BlockCrossings =>
+    bcs.map(([a, b, c]) => [a + by, b + by, c + by]);
+
+export const twoSidedScm = (story: Storyline): SBCMRealization => {
+    const [topSet, bottomSet] = tail(maxCutGreedyEC(mkCrossingMatrix(story), story.authorIds.length))
+    console.log({ note: 'the greedy cut', topSet, bottomSet })
+    const [topStory, topSize, bottomStory, bottomSize] = splitStory(story, topSet, bottomSet);
+    const [topReal, bottomReal] = [oneSidedScm(topStory), oneSidedScm(bottomStory)];
+    topReal.initialPermutation = topReal.initialPermutation.slice(0, topSize);
+    bottomReal.initialPermutation = bottomReal.initialPermutation.slice(0, bottomSize);
+    return mergeRealizations(topReal, bottomReal);
 }

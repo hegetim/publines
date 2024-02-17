@@ -34,7 +34,6 @@ export const cls = (...names: (string | { [index: string]: boolean })[]) => {
     return { className: joined };
 }
 
-// fixme may violate CSP!
 export const calcTextSize = (() => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
     svg.setAttribute('class', 'off-screen-element');
@@ -49,3 +48,6 @@ export const calcTextSize = (() => {
     };
 })();
 
+type Tail<T extends readonly any[] = readonly []> = T extends readonly [infer _, ...infer R] ? R : [];
+
+export const tail = <T extends readonly any[]>(tuple: readonly [...T]) => tuple.slice(1) as readonly any[] as Tail<T>

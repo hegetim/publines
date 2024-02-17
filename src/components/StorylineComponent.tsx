@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import _ from "lodash"
 import { Author, Publication, filterInformal } from "../model/Metadata"
 import { DrawingConfig, DrawingResult, drawSections } from "../model/StorylineDrawings"
@@ -8,6 +8,7 @@ import { oneSidedScm } from "../model/OneSided"
 import { StorylineSvg, SelfRef as MainSVGRef } from "./StorylineSvg"
 import { StorylineYTickLabels } from "./StorylineYTickLabels"
 import "./Storyline.css"
+import { twoSidedScm } from "../model/TwoSided"
 
 export const StorylineComponent = (props: {
     drawingConfig: DrawingConfig
@@ -15,8 +16,8 @@ export const StorylineComponent = (props: {
     protagonist: Author,
 }) => {
     const filtered = filterInformal(props.publications, 'repeated');
-    const [story, authors] = mkStoryline(filtered, props.protagonist, 10);
-    const realization = oneSidedScm(story); // todo make configurable
+    const [story, authors] = mkStoryline(filtered, props.protagonist, 10); // todo make configurable
+    const realization = twoSidedScm(story); // todo make configurable
     const meetingTickLabels = filtered.map(p => p.year.toString());
     const authorNames = story.authorIds.map(id => authors.get(id)!.name);
 
@@ -40,11 +41,13 @@ const InnerComponent = (props: {
     const mainRef = useRef<MainSVGRef | null>(null);
     const [scrollPos, setScrollPos] = useState(0);
 
-    const pathYPos = useCallback((i: number, rsp: number) =>
-        mainRef.current?.getPathPos(i, rsp)?.y ??
-        (props.realization.initialPermutation.indexOf(i) * props.drawingConfig.lineDist),
-        [mainRef, props.drawingConfig],
-    );
+    const pathYPos = useCallback((i: number, rsp: number) => {
+        return mainRef.current?.getPathPos(i, rsp)?.y ??
+            (props.realization.initialPermutation.indexOf(i) * props.drawingConfig.lineDist);
+        /// fixme:
+        /// When the protagonist changes, the main svg is still there and propates the old author order.
+        /// Instead, we should use the realization's initial author order
+    }, [mainRef, props.drawingConfig.lineDist, props.realization.initialPermutation]);
     const debouncedScroll = useCallback(_.debounce(setScrollPos, 250), [setScrollPos]);
     const handleScroll = useCallback((ev: React.UIEvent<HTMLDivElement>) =>
         debouncedScroll(ev.currentTarget.scrollLeft / ev.currentTarget.scrollWidth), [debouncedScroll]);
