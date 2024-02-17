@@ -9,7 +9,7 @@ export interface Storyline {
 export const mkStoryline = (
     publications: Publication[],
     protagonist: Author,
-    limit: number,
+    limit: number | false,
 ): [Storyline, Map<string, Author>] => {
     let authors: Map<string, [Author, number]> = new Map();
     publications.flatMap(p => p.authors).forEach(contributor => {
@@ -18,7 +18,7 @@ export const mkStoryline = (
         else { authors.set(contributor.id, [contributor, 1]); }
     });
     authors.delete(protagonist.id);
-    const orderedAuthors = [protagonist.id, ...(mostFrequentKeys(authors, limit))];
+    const orderedAuthors = [protagonist.id, ...(mostFrequentKeys(authors, limit || -1))];
     let meetings: number[][] = [];
     for (const publ of publications) {
         const meeting = publ.authors

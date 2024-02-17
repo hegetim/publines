@@ -1,12 +1,12 @@
 import _ from "lodash";
 import { MeetingSect, Section } from "./Sections";
-import { as, assertExhaustive, calcTextSize, matchByKind, matchString } from "./Util";
+import { TupleToUnion, as, assertExhaustive, calcTextSize, matchByKind, matchString } from "./Util";
 
 export interface DrawingConfig {
     lineDist: number,
     stretch: number,
     meetingStyle: MeetingStyle,
-    enumerateMeetings: undefined | 'x' | '[x]' | 'x.',
+    enumerateMeetings: undefined | TupleToUnion<typeof enumerationStyles>,
     xAxisPos: 'top' | 'bottom',
     crossing2crossingMargin: number,
     crossing2meetingMargin: number,
@@ -17,34 +17,17 @@ export interface DrawingConfig {
     labelLineSpacing: number,
 }
 
-export const defaultConfig = (lineDist: number) => as<DrawingConfig>({
-    lineDist,
-    stretch: .4,
-    initialMargin: lineDist / 2,
-    finalMargin: lineDist / 2,
-    crossing2crossingMargin: lineDist / 4,
-    crossing2meetingMargin: lineDist / 4,
-    meeting2meetingMargin: lineDist / 2,
-    xAxisLabelMargin: lineDist / 4,
-    meetingStyle: {
-        kind: 'Metro',
-        relWidth: 2 / 3,
-        relStrapSize: 2 / 5,
-    },
-    enumerateMeetings: 'x',
-    xAxisPos: 'bottom',
-    labelLineSpacing: 1.2,
-});
-
 export type MeetingStyle = {
-    kind: 'Bar',
+    kind: 'bar',
     relWidth: number,
     relExcess: number,
 } | {
-    kind: 'Metro',
+    kind: 'metro',
     relWidth: number,
     relStrapSize: number,
 }
+
+export const enumerationStyles = ['x', '[x]', 'x.'] as const;
 
 export interface BBox {
     top: number,
@@ -136,13 +119,13 @@ const meetingMargin = (info: DrawingConfig, previous: Section['kind']) => matchS
 const meetingWidth = (info: DrawingConfig) => info.lineDist * info.meetingStyle.relWidth
 
 const meetingExcess = (info: DrawingConfig): number => matchByKind(info.meetingStyle, {
-    'Bar': bar => bar.relExcess * info.lineDist,
-    'Metro': metro => metro.relWidth * info.lineDist / 2,
+    'bar': bar => bar.relExcess * info.lineDist,
+    'metro': metro => metro.relWidth * info.lineDist / 2,
 })
 
 const drawMeeting = (info: DrawingConfig, atX: number, meeting: MeetingSect): string => matchByKind(info.meetingStyle, {
-    'Bar': bar => drawBar(info.lineDist, bar.relWidth, bar.relExcess, atX, meeting.from, meeting.to),
-    'Metro': metro => drawMetroStation(info.lineDist, metro.relWidth, metro.relStrapSize, atX, meeting.from, meeting.to),
+    'bar': bar => drawBar(info.lineDist, bar.relWidth, bar.relExcess, atX, meeting.from, meeting.to),
+    'metro': metro => drawMetroStation(info.lineDist, metro.relWidth, metro.relStrapSize, atX, meeting.from, meeting.to),
 });
 
 const drawBar = (dist: number, relWidth: number, relExcess: number, atX: number, from: number, to: number) => {

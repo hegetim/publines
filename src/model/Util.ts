@@ -51,3 +51,5 @@ export const calcTextSize = (() => {
 type Tail<T extends readonly any[] = readonly []> = T extends readonly [infer _, ...infer R] ? R : [];
 
 export const tail = <T extends readonly any[]>(tuple: readonly [...T]) => tuple.slice(1) as readonly any[] as Tail<T>
+
+export type TupleToUnion<T extends readonly string[]> = (T)[number]

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "./Storyline";
+import { Publication } from "./Metadata";
 
 export type Section = MeetingSect | BlockCrossingSect | EmptySect
 
@@ -21,7 +22,7 @@ export interface EmptySect {
     kind: 'empty'
 }
 
-export const mkSections = (story: Storyline, realization: SBCMRealization, labels: string[]) => {
+export const mkSections = (story: Storyline, realization: SBCMRealization, publ: Publication[]) => {
     let perm = realization.initialPermutation;
     console.log({ init: realization.initialPermutation, story })
     const result: Section[] = []; // mutable :(
@@ -39,7 +40,8 @@ export const mkSections = (story: Storyline, realization: SBCMRealization, label
         }
         const supported = supportsMeeting(perm, meeting)
         if (!supported) { throw new Error(`meeting ${meeting} is unsupported by <${perm}>`); }
-        result.push({ kind: 'meeting', ordinal, xTickLabel: labels[ordinal], ...supported });
+        const meta = publ[ordinal]!
+        result.push({ kind: 'meeting', ordinal, xTickLabel: meta.year.toString(), ...supported });
     });
     return result;
 }

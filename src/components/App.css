@@ -1,5 +1,6 @@
 .App {
     display: grid;
+    row-gap: 2ex;
 }
 
 @media (width > 800px) {
@@ -16,14 +17,22 @@
 
 .App h1,
 .App p,
-.App .author-name-container {
+.author-name-container,
+.settings-outer-container {
     grid-column: 2;
 }
 
-.App .story-main-container {
+p.intro-par {
+    margin: 0;
+}
+
+.App h1 {
+    margin-bottom: 0;
+}
+
+.story-main-container {
     grid-column: 1 / span 3;
     justify-self: center;
-    margin-top: 2ex;
     display: grid;
     grid-template-columns: auto 1fr;
 }

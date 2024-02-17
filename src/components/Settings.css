@@ -1,0 +1,45 @@
+.settings-collapsed {
+    overflow: hidden;
+    height: 0;
+}
+
+.settings-click-me {
+    cursor: pointer;
+}
+
+.settings-inner-container {
+    margin: 1ex 0 0 2ex;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4ex;
+}
+
+.settings-inner-header {
+    margin-top: 0.2ex;
+    font-style: italic;
+}
+
+.settings-inner-par {
+    margin-left: 1ex;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 0.3ex;
+}
+
+.settings-setting-input {
+    margin: 0 1ex;
+}
+
+input.settings-setting-input {
+    width: 60px;
+}
+
+.settings-setting-oneline {
+    grid-column: span 2;
+}
+
+.settings-select-provider,
+.settings-select-informal,
+.settings-select-algo {
+    justify-self: start;
+}

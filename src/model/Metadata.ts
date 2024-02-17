@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { matchString } from "./Util";
+import { matchString, TupleToUnion } from "./Util";
 
 export interface Author {
     name: string,
@@ -20,9 +20,10 @@ export interface Publication {
     informal: boolean,
 }
 
-export type FilterInformal = 'none' | 'all' | 'repeated';
+export const excludeInformalOpts = ['none', 'all', 'repeated'] as const;
+export type ExcludeInformal = TupleToUnion<typeof excludeInformalOpts>;
 
-export const filterInformal = (publ: Publication[], conf: FilterInformal) => matchString(conf, {
+export const filterInformal = (publ: Publication[], conf: ExcludeInformal) => matchString(conf, {
     'none': () => publ,
     'all': () => publ.filter(p => !p.informal),
     'repeated': () => {

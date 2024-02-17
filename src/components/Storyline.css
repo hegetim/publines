@@ -5,6 +5,7 @@
 
 .story-main-container .story-svg-container {
     overflow-x: scroll;
+    margin-right: 1ex;
 }
 
 .story-main-container .story-y-labels {

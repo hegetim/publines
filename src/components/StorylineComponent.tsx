@@ -1,32 +1,37 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import _ from "lodash"
+import "./Storyline.css"
 import { Author, Publication, filterInformal } from "../model/Metadata"
 import { DrawingConfig, DrawingResult, drawSections } from "../model/StorylineDrawings"
 import { mkSections } from "../model/Sections"
 import { SBCMRealization, mkStoryline } from "../model/Storyline"
 import { oneSidedScm } from "../model/OneSided"
+import { twoSidedScm } from "../model/TwoSided"
 import { StorylineSvg, SelfRef as MainSVGRef } from "./StorylineSvg"
 import { StorylineYTickLabels } from "./StorylineYTickLabels"
-import "./Storyline.css"
-import { twoSidedScm } from "../model/TwoSided"
+import { UserConfig, mkDrawingConfig } from "../model/UserConfig"
+import { matchByKind } from "../model/Util"
 
 export const StorylineComponent = (props: {
-    drawingConfig: DrawingConfig
+    config: UserConfig,
     publications: Publication[],
     protagonist: Author,
 }) => {
-    const filtered = filterInformal(props.publications, 'repeated');
-    const [story, authors] = mkStoryline(filtered, props.protagonist, 10); // todo make configurable
-    const realization = twoSidedScm(story); // todo make configurable
-    const meetingTickLabels = filtered.map(p => p.year.toString());
+    const filtered = filterInformal(props.publications, props.config.data.filterInformal);
+    const [story, authors] = mkStoryline(filtered, props.protagonist, props.config.data.coauthorCap);
+    const realization: SBCMRealization = matchByKind(props.config.algo, {
+        '1scm': () => oneSidedScm(story),
+        '2scm': () => twoSidedScm(story),
+    });
     const authorNames = story.authorIds.map(id => authors.get(id)!.name);
+    const drawingConfig = mkDrawingConfig(props.config.style)
 
-    const sections = mkSections(story, realization, meetingTickLabels)!;
-    const drawn = drawSections(props.drawingConfig, sections, realization.initialPermutation);
+    const sections = mkSections(story, realization, filtered)!;
+    const drawn = drawSections(drawingConfig, sections, realization.initialPermutation);
 
     return <div className="story-main-container">
-        <InnerComponent authorNames={authorNames} drawingConfig={props.drawingConfig} drawn={drawn}
-            meetingTitles={filtered.map(p => p.title)} realization={realization} />
+        <InnerComponent authorNames={authorNames} drawingConfig={drawingConfig} drawn={drawn}
+            meetingMeta={filtered.map(p => ({ title: p.title, informal: p.informal }))} realization={realization} />
     </div>
 }
 
@@ -36,7 +41,7 @@ const InnerComponent = (props: {
     drawingConfig: DrawingConfig,
     authorNames: string[],
     drawn: DrawingResult,
-    meetingTitles: string[],
+    meetingMeta: { title: string, informal: boolean }[],
 }) => {
     const mainRef = useRef<MainSVGRef | null>(null);
     const [scrollPos, setScrollPos] = useState(0);
@@ -57,12 +62,13 @@ const InnerComponent = (props: {
             relativeScrollPos={scrollPos} pathYPos={pathYPos} />
         <div className="story-svg-container" onScroll={handleScroll}>
             <StorylineSvg ref={el => mainRef.current = el} config={props.drawingConfig} drawn={props.drawn}
-                authorNames={props.authorNames} meetingTitles={props.meetingTitles} />
+                authorNames={props.authorNames} meetingMeta={props.meetingMeta} />
         </div>
     </React.Fragment>
 }
 
-export const selectColor = (i: number) => pkColors[i === 0 ? 0 : (i - 1) % (pkColors.length - 1) + 1]!; // assumes ego has idx 0
+/// assumes ego has idx 0
+export const selectColor = (i: number) => pkColors[i === 0 ? 0 : (i - 1) % (pkColors.length - 1) + 1]!;
 
 const pkColors = [
     '#808080', // PK dark gray

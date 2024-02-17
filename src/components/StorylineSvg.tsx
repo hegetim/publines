@@ -1,12 +1,11 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react"
 import _ from "lodash";
-import { DrawingConfig, DrawingResult, MeetingStyle, ProtoLabel, bbox2viewBox, drawSections } from "../model/StorylineDrawings"
+import { DrawingConfig, DrawingResult, MeetingStyle, ProtoLabel, bbox2viewBox } from "../model/StorylineDrawings"
 import { matchString } from "../model/Util";
 import { selectColor } from "./StorylineComponent";
 
 export const StorylineSvg = forwardRef<SelfRef, Props>((props: Props, selfRef) => {
     const pathCommons = { fill: "none", strokeWidth: 3 };
-    const meetingCommons = mkMeetingStyle(props.config.meetingStyle);
     const bbox = props.drawn.bbox;
 
     const pathRefs = useRef<(SVGPathElement | null)[]>([]);
@@ -29,8 +28,10 @@ export const StorylineSvg = forwardRef<SelfRef, Props>((props: Props, selfRef) =
                 </path>)}
         </g>
         <g>
-            {..._.zip(props.drawn.meetings, props.meetingTitles).map(([cmds, title], i) =>
-                <path key={i} {...meetingCommons} d={cmds}><title>{title}</title></path>)}
+            {..._.zip(props.drawn.meetings, props.meetingMeta).map(([cmds, meta], i) =>
+                <path key={i} {...mkMeetingStyle(props.config.meetingStyle, meta!.informal)} d={cmds}>
+                    <title>{meta!.title}</title>
+                </path>)}
         </g>
         <g>
             {...props.drawn.labels.map(l => <text {...mkLabelStyle(l)} x={l.x} y={l.y}>{l.text}</text>)}
@@ -38,9 +39,9 @@ export const StorylineSvg = forwardRef<SelfRef, Props>((props: Props, selfRef) =
     </svg>
 });
 
-const mkMeetingStyle = (style: MeetingStyle) => matchString(style.kind, {
-    'Bar': () => ({ stroke: "none", fill: "black" }),
-    'Metro': () => ({ stroke: "black", fill: "white", strokeWidth: 1 }),
+const mkMeetingStyle = (style: MeetingStyle, informal: boolean) => matchString(style.kind, {
+    'bar': () => ({ stroke: "none", fill: (informal ? "#808080" : "black") }),
+    'metro': () => ({ stroke: "black", fill: (informal ? "#cccccc" : "white"), strokeWidth: 1 }),
 });
 
 const labelCommons = { textAnchor: 'middle' };
@@ -57,6 +58,6 @@ export interface SelfRef {
 interface Props {
     config: DrawingConfig,
     drawn: DrawingResult,
-    meetingTitles: string[],
+    meetingMeta: { title: string, informal: boolean }[],
     authorNames: string[],
 }
