@@ -24,7 +24,7 @@ export interface EmptySect {
 
 export const mkSections = (story: Storyline, realization: SBCMRealization, publ: Publication[]) => {
     let perm = realization.initialPermutation;
-    console.log({ init: realization.initialPermutation, story })
+    // console.log({ init: realization.initialPermutation, story })
     const result: Section[] = []; // mutable :(
     _.zip(story.meetings, realization.blockCrossings).forEach(([meeting, blockCrossings], ordinal) => {
         if (!meeting) {

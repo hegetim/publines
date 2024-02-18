@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
-import { Author } from "../model/Metadata";
 import "./MainAuthor.css"
 import _ from "lodash";
+import { Author } from "../model/Metadata";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencil } from "@fortawesome/free-solid-svg-icons";
 import { assertExhaustive, cls } from "../model/Util";
