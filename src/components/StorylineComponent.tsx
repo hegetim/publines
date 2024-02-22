@@ -43,16 +43,13 @@ const InnerComponent = (props: {
     drawn: DrawingResult,
     meetingMeta: { title: string, informal: boolean }[],
 }) => {
-    const mainRef = useRef<MainSVGRef | null>(null);
     const [scrollPos, setScrollPos] = useState(0);
 
     const pathYPos = useCallback((i: number, rsp: number) => {
-        return mainRef.current?.getPathPos(i, rsp)?.y ??
-            (props.realization.initialPermutation.indexOf(i) * props.drawingConfig.lineDist);
-        /// fixme:
-        /// When the protagonist changes, the main svg is still there and propates the old author order.
-        /// Instead, we should use the realization's initial author order
-    }, [mainRef, props.drawingConfig.lineDist, props.realization.initialPermutation]);
+        const x = rsp * props.drawn.bbox.width;
+        return props.drawn.yLabelPositions[i]!.findLast(pos => pos.fromX <= x)!.y;
+    }, [props.drawn]);
+
     const debouncedScroll = useCallback(_.debounce(setScrollPos, 250), [setScrollPos]);
     const handleScroll = useCallback((ev: React.UIEvent<HTMLDivElement>) =>
         debouncedScroll(ev.currentTarget.scrollLeft / ev.currentTarget.scrollWidth), [debouncedScroll]);
@@ -63,8 +60,8 @@ const InnerComponent = (props: {
                 relativeScrollPos={scrollPos} pathYPos={pathYPos} />
         </div>
         <div className="story-svg-container" onScroll={handleScroll}>
-            <StorylineSvg ref={el => mainRef.current = el} config={props.drawingConfig} drawn={props.drawn}
-                authorNames={props.authorNames} meetingMeta={props.meetingMeta} />
+            <StorylineSvg config={props.drawingConfig} drawn={props.drawn} authorNames={props.authorNames}
+                meetingMeta={props.meetingMeta} />
         </div>
     </React.Fragment>
 }

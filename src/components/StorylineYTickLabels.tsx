@@ -12,8 +12,6 @@ export const StorylineYTickLabels = (props: {
     const width = Math.max(...props.labels.map(s => calcTextSize(s).width));
     const commons = { textAnchor: 'end' }
 
-    console.log({ note: 'drawing y axis labels', rsp: props.relativeScrollPos });
-
     return <svg className="story-y-labels" {...bbox2viewBox({ ...props.mainBBox, width, left: 0 })}>
         {props.labels.map((s, i) => <text key={s + i} {...commons} fill={props.colors ? props.colors(i) : 'black'}
             x={width} y={props.pathYPos(i, props.relativeScrollPos)}>{s}</text>)}

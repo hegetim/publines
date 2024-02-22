@@ -49,11 +49,20 @@ export interface DrawingResult {
     meetings: string[],
     labels: ProtoLabel<"enum" | "tick">[],
     bbox: BBox,
+    yLabelPositions: LabelPos[][],
+}
+
+export interface LabelPos {
+    fromX: number,
+    y: number,
 }
 
 export const drawSections = (info: DrawingConfig, sections: Section[], initialPermutation: number[]): DrawingResult => {
     const paths = new Array<string>(initialPermutation.length);
     initialPermutation.forEach((p, i) => paths[p] = `M 0 ${i * info.lineDist}`);
+
+    const yLabelPositions = new Array<LabelPos[]>(initialPermutation.length);
+    initialPermutation.forEach((p, i) => yLabelPositions[p] = [{ fromX: 0, y: i * info.lineDist }]);
 
     const xBuf = new Array<[number, Section['kind']]>(initialPermutation.length).fill([0, 'empty']);
     let [enumLabelBuf, tickLabelBuf]: [number, [number, string]] = [0, [0, '']];
@@ -90,11 +99,13 @@ export const drawSections = (info: DrawingConfig, sections: Section[], initialPe
             }
         } else if (sect.kind === 'block-crossing') {
             const metrics = mkBcMetrics(info, ...sect.bc);
-            const x = _.range(sect.bc[0], sect.bc[2] + 1).reduce((max, i) =>
-                Math.max(max, xBuf[i]![0] + crossingMargin(info, xBuf[i]![1])), 0);
+            const x = Math.max(..._.range(sect.bc[0], sect.bc[2] + 1)
+                .map((i) => xBuf[i]![0] + crossingMargin(info, xBuf[i]![1])));
             _.range(sect.bc[0], sect.bc[2] + 1).forEach(i => {
-                xBuf[i] = [x + bcWidth(metrics), sect.kind];
+                const w = bcWidth(metrics);
+                xBuf[i] = [x + w, sect.kind];
                 paths[sect.perm[i - sect.bc[0]]!] += ` H ${x} ${drawSLine(metrics, i)}`;
+                yLabelPositions[sect.perm[i - sect.bc[0]]!]!.push({ fromX: x + w / 2, y: bcY(metrics, i) });
             });
         } else { assertExhaustive(sect); }
     }
@@ -108,7 +119,9 @@ export const drawSections = (info: DrawingConfig, sections: Section[], initialPe
     }
     paths.forEach((_, i, self) => self[i] += ` H ${bbox.width}`);
 
-    return { paths, meetings, labels, bbox };
+    console.log(yLabelPositions)
+
+    return { paths, meetings, labels, bbox, yLabelPositions };
 }
 
 const meetingMargin = (info: DrawingConfig, previous: Section['kind']) => matchString(previous, {
@@ -185,7 +198,7 @@ export const bbox2viewBox = (bbox: BBox) => ({
 });
 
 /// see ../../docu/storylineUtils.pdf
-export interface BcMetrics {
+interface BcMetrics {
     info: DrawingConfig,
     smallGroupAtTop: boolean,
     bc: [number, number, number]
@@ -196,9 +209,7 @@ export interface BcMetrics {
     w: number,
 }
 
-export const bcWidth = (m: BcMetrics) => m.w * m.info.lineDist;
-
-export const mkBcMetrics = (info: DrawingConfig, a: number, b: number, c: number) => {
+const mkBcMetrics = (info: DrawingConfig, a: number, b: number, c: number) => {
     const smallGroupAtTop = b - a + 1 <= c - b;
     const p = b + 0.5 + (smallGroupAtTop ? 1 : -1) * info.stretch * (c - a);
     const q = c - p + a;
@@ -212,7 +223,14 @@ export const mkBcMetrics = (info: DrawingConfig, a: number, b: number, c: number
     return as<BcMetrics>({ info, smallGroupAtTop, bc: [a, b, c], p, s, k, w, t });
 }
 
-export const drawSLine = (m: BcMetrics, startIndex: number) => {
+const bcWidth = (m: BcMetrics) => m.w * m.info.lineDist;
+
+const bcY = (m: BcMetrics, startIndex: number) => {
+    const [a, b, c] = m.bc;
+    return m.info.lineDist * (startIndex <= b ? startIndex + c - b : startIndex + a - b - 1);
+}
+
+const drawSLine = (m: BcMetrics, startIndex: number) => {
     const [a, b, c] = m.bc;
     const i = startIndex;
     const isTL2BR = i <= b;
