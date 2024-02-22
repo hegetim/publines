@@ -15,6 +15,7 @@ export interface DrawingConfig {
     finalMargin: number,
     xAxisLabelMargin: number,
     labelLineSpacing: number,
+    authorLineStrokeWidth: number,
 }
 
 export type MeetingStyle = {
@@ -124,15 +125,12 @@ const meetingExcess = (info: DrawingConfig): number => matchByKind(info.meetingS
 })
 
 const drawMeeting = (info: DrawingConfig, atX: number, meeting: MeetingSect): string => matchByKind(info.meetingStyle, {
-    'bar': bar => drawBar(info.lineDist, bar.relWidth, bar.relExcess, atX, meeting.from, meeting.to),
+    'bar': bar => drawBar(info.lineDist, bar.relExcess, atX, meeting.from, meeting.to),
     'metro': metro => drawMetroStation(info.lineDist, metro.relWidth, metro.relStrapSize, atX, meeting.from, meeting.to),
 });
 
-const drawBar = (dist: number, relWidth: number, relExcess: number, atX: number, from: number, to: number) => {
-    const w = dist * relWidth;
-    const h = (to - from + 2 * relExcess) * dist;
-    return `M ${atX - w / 2} ${(from - relExcess) * dist} h ${w} v ${h} h ${-w} z`;
-}
+const drawBar = (dist: number, relExcess: number, atX: number, from: number, to: number) =>
+    `M ${atX} ${(from - relExcess) * dist} v ${(to - from + 2 * relExcess) * dist}`
 
 /// see ../../docu/metro-stations.pdf
 const drawMetroStation = (d: number, relW: number, relS: number, atX: number, from: number, to: number) => {

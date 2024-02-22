@@ -13,6 +13,7 @@ export interface StyleConfig {
     meetingStyle: MeetingStyle['kind'],
     xAxisPosition: DrawingConfig['xAxisPos'],
     enumerationStyle: DrawingConfig['enumerateMeetings'],
+    authorLineThickness: 'thin' | 'normal' | 'heavier' | 'fat',
 }
 
 export interface DataConfig {
@@ -26,6 +27,8 @@ export interface AlgoConfig {
 }
 
 export const sbcmAlgos = ['1scm', '2scm'] as const;
+
+const baseThickness = 3;
 
 export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
     lineDist: base.lineDistance,
@@ -43,10 +46,16 @@ export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
     xAxisPos: base.xAxisPosition,
     enumerateMeetings: base.enumerationStyle,
     labelLineSpacing: 1.2,
+    authorLineStrokeWidth: matchString(base.authorLineThickness, {
+        'thin': () => baseThickness / Math.SQRT2,
+        'normal': () => baseThickness,
+        'heavier': () => baseThickness * Math.SQRT2,
+        'fat': () => baseThickness * 2,
+    })
 });
 
 export const configDefaults: UserConfig = {
     algo: { kind: '2scm' },
     data: { source: 'Dblp', filterInformal: 'repeated', coauthorCap: 10 },
-    style: { lineDistance: 24, meetingStyle: 'metro', xAxisPosition: 'bottom', enumerationStyle: 'x' },
+    style: { lineDistance: 24, meetingStyle: 'metro', xAxisPosition: 'bottom', enumerationStyle: 'x', authorLineThickness: 'normal' },
 }

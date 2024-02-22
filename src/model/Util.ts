@@ -27,7 +27,8 @@ export function* windows2<T>(array: T[]) {
     }
 }
 
-export const cls = (...names: (string | { [index: string]: boolean })[]) => {
+export type ClassNames = (string | { [index: string]: boolean })[];
+export const cls = (...names: ClassNames) => {
     const joined = names.flatMap(name =>
         _.isString(name) ? [name] : _.toPairs(name).filter(([_, flag]) => flag).map(([s, _]) => s)
     ).join(" ");

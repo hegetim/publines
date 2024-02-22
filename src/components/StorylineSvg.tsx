@@ -1,11 +1,11 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react"
 import _ from "lodash";
-import { DrawingConfig, DrawingResult, MeetingStyle, ProtoLabel, bbox2viewBox } from "../model/StorylineDrawings"
-import { matchString } from "../model/Util";
+import { DrawingConfig, DrawingResult, ProtoLabel, bbox2viewBox } from "../model/StorylineDrawings"
+import { matchByKind, matchString } from "../model/Util";
 import { selectColor } from "./StorylineComponent";
 
 export const StorylineSvg = forwardRef<SelfRef, Props>((props: Props, selfRef) => {
-    const pathCommons = { fill: "none", strokeWidth: 3 };
+    const pathCommons = { fill: "none", strokeWidth: props.config.authorLineStrokeWidth };
     const bbox = props.drawn.bbox;
 
     const pathRefs = useRef<(SVGPathElement | null)[]>([]);
@@ -29,7 +29,7 @@ export const StorylineSvg = forwardRef<SelfRef, Props>((props: Props, selfRef) =
         </g>
         <g>
             {..._.zip(props.drawn.meetings, props.meetingMeta).map(([cmds, meta], i) =>
-                <path key={i} {...mkMeetingStyle(props.config.meetingStyle, meta!.informal)} d={cmds}>
+                <path key={i} {...mkMeetingStyle(props.config, meta!.informal)} d={cmds}>
                     <title>{meta!.title}</title>
                 </path>)}
         </g>
@@ -39,10 +39,11 @@ export const StorylineSvg = forwardRef<SelfRef, Props>((props: Props, selfRef) =
     </svg>
 });
 
-const mkMeetingStyle = (style: MeetingStyle, informal: boolean) => matchString(style.kind, {
-    'bar': () => ({ stroke: "none", fill: (informal ? "#808080" : "black") }),
-    'metro': () => ({ stroke: "black", fill: (informal ? "#cccccc" : "white"), strokeWidth: 1 }),
-});
+const mkMeetingStyle = (config: DrawingConfig, informal: boolean): React.SVGProps<SVGPathElement> =>
+    matchByKind(config.meetingStyle, {
+        'bar': bar => ({ stroke: (informal ? "#808080" : "black"), strokeWidth: config.lineDist * bar.relWidth }),
+        'metro': () => ({ stroke: "black", fill: (informal ? "#cccccc" : "white"), strokeWidth: 1 }),
+    });
 
 const labelCommons = { textAnchor: 'middle' };
 

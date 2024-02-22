@@ -58,8 +58,10 @@ const InnerComponent = (props: {
         debouncedScroll(ev.currentTarget.scrollLeft / ev.currentTarget.scrollWidth), [debouncedScroll]);
 
     return <React.Fragment>
-        <StorylineYTickLabels labels={props.authorNames} mainBBox={props.drawn.bbox} colors={selectColor}
-            relativeScrollPos={scrollPos} pathYPos={pathYPos} />
+        <div className="story-labels-container">
+            <StorylineYTickLabels labels={props.authorNames} mainBBox={props.drawn.bbox} colors={selectColor}
+                relativeScrollPos={scrollPos} pathYPos={pathYPos} />
+        </div>
         <div className="story-svg-container" onScroll={handleScroll}>
             <StorylineSvg ref={el => mainRef.current = el} config={props.drawingConfig} drawn={props.drawn}
                 authorNames={props.authorNames} meetingMeta={props.meetingMeta} />

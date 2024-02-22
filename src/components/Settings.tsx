@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import _ from "lodash";
 import * as O from 'optics-ts/standalone';
 import './Settings.css';
-import { AlgoConfig, UserConfig, sbcmAlgos } from "../model/UserConfig";
+import { AlgoConfig, StyleConfig, UserConfig, sbcmAlgos } from "../model/UserConfig";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight, faToggleOff, faToggleOn } from "@fortawesome/free-solid-svg-icons";
 import { TupleToUnion, cls, matchString } from "../model/Util";
 import { ExcludeInformal, excludeInformalOpts } from "../model/Metadata";
 import { DrawingConfig, MeetingStyle, enumerationStyles } from "../model/StorylineDrawings";
+import { SelectButton } from "./SelectButton";
 
 export const Settings = (props: Props) => {
     const [isCollapsed, setCollapsed] = useState(true);
@@ -21,10 +22,12 @@ export const Settings = (props: Props) => {
             <div className="settings-inner-header">Data Source</div>
             <div className="settings-inner-par">
                 <div className="settings-setting-label">data provider:</div>
-                <select {...cls('settings-setting-input', 'settings-select-provider')}><option>DBLP.org</option></select>
+                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-provider')}>
+                    <option>DBLP.org</option>
+                </select>
                 <div className="settings-setting-label">exclude informal publications:</div>
-                <select {...cls('settings-setting-input', 'settings-select-informal')} value={props.config.data.filterInformal}
-                    onChange={x => props.updateConfig(excludeInformal(x.target.value))}>
+                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-informal')}
+                    value={props.config.data.filterInformal} onChange={x => props.updateConfig(excludeInformal(x.target.value))}>
                     {...mkOptions<ExcludeInformal>({
                         'all': "exclude all",
                         'repeated': "exclude repeated titles",
@@ -36,19 +39,23 @@ export const Settings = (props: Props) => {
             <div className="settings-inner-header">Algorithms</div>
             <div className="settings-inner-par">
                 <div className="settings-setting-label">(block) crossing minimization:</div>
-                <select {...cls('settings-setting-input', 'settings-select-algo')} value={props.config.algo.kind}
-                    onChange={x => props.updateConfig(algoKind(x.target.value))}>
+                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-algo')}
+                    value={props.config.algo.kind} onChange={x => props.updateConfig(algoKind(x.target.value))}>
                     {...mkOptions<AlgoConfig['kind']>({ '1scm': "one-sided SCM", '2scm': "two-sided SCM" })}
                 </select>
             </div>
             <div className="settings-inner-header">Visuals</div>
             <div className="settings-inner-par">
                 <div className="settings-setting-label">distance between author lines:</div>
-                <div>
+                <div className="settings-input-container">
                     <input {...cls('settings-setting-input', 'settings-input-cap')} type="number" min={1}
                         value={props.config.style.lineDistance} onChange={ev => props.updateConfig(lineDist(ev.target.value))} />
                     <span className="settings-setting-label">px</span>
                 </div>
+                <div className="settings-setting-label">author line thickness:</div>
+                <SelectButton<StyleConfig['authorLineThickness']> value={props.config.style.authorLineThickness}
+                    setValue={key => props.updateConfig(lineThickness(key))} additionalClassNames={['settings-input-container']}
+                    labels={{ 'thin': "thin", 'normal': "normal", 'heavier': "heavier", 'fat': "fat" }} />
                 <ToggleMeetingStyleWidget {...props} />
                 <ToggleXAxisPosWidget {...props} />
                 <EnumerationStyleWidget {...props} />
@@ -91,7 +98,7 @@ const ToggleMeetingStyleWidget = (props: Props) => {
     const selectRight = matchString(props.config.style.meetingStyle, { 'metro': () => false, 'bar': () => true });
     return <React.Fragment>
         <div className="settings-setting-label">draw meetings as:</div>
-        <div className="settings-click-me" onClick={() => props.updateConfig(toggleMeetingStyle)}>
+        <div onClick={() => props.updateConfig(toggleMeetingStyle)} {...cls('settings-click-me', 'settings-input-container')}>
             <span className="settings-setting-label">metro station</span>
             <FontAwesomeIcon className="settings-setting-input" icon={faToggleOff} {...(selectRight ? { flip: 'horizontal' } : {})} />
             <span className="settings-setting-label">vertical bar</span>
@@ -103,7 +110,7 @@ const ToggleXAxisPosWidget = (props: Props) => {
     const selectRight = matchString(props.config.style.xAxisPosition, { 'top': () => false, 'bottom': () => true });
     return <React.Fragment>
         <div className="settings-setting-label">place x-axis at:</div>
-        <div className="settings-click-me" onClick={() => props.updateConfig(toggleXAxisPos)}>
+        <div onClick={() => props.updateConfig(toggleXAxisPos)} {...cls('settings-click-me', 'settings-input-container')}>
             <span className="settings-setting-label">top</span>
             <FontAwesomeIcon className="settings-setting-input" icon={faToggleOff} {...(selectRight ? { flip: 'horizontal' } : {})} />
             <span className="settings-setting-label">bottom</span>
@@ -161,6 +168,9 @@ const algoKind = (raw: string) => (c: UserConfig) =>
 
 const lineDist = (raw: string) => (c: UserConfig) =>
     O.set(O.compose('style', 'lineDistance'), parsePositiveOrElse(raw, c.style.lineDistance), c)
+
+const lineThickness: (key: StyleConfig['authorLineThickness']) => (c: UserConfig) => UserConfig =
+    O.set(O.compose('style', 'authorLineThickness'))
 
 type K1 = MeetingStyle['kind'];
 const toggleMeetingStyle: (c: UserConfig) => UserConfig = O.modify(O.compose('style', 'meetingStyle'), (s: K1) =>

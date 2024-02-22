@@ -1,0 +1,31 @@
+.select-button-container {
+    white-space: nowrap;
+    font-size: medium;
+}
+
+.select-button-option {
+    display: inline-block;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #808080;
+    min-width: 40px;
+    border-left: none;
+    padding: 0 1ex;
+}
+
+.select-button-option:first-child {
+    border-left: 1px solid #808080;
+    border-radius: 1ex 0 0 1ex;
+}
+
+.select-button-option:last-child {
+    border-radius: 0 1ex 1ex 0;
+}
+
+.select-button-option:hover:not(.select-button-selected) {
+    background-color: #eee;
+}
+
+.select-button-selected {
+    background-color: #ccc;
+}

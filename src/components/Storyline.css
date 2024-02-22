@@ -1,13 +1,25 @@
-.story-main-container svg,
 .story-main-container div {
     display: inline;
 }
 
-.story-main-container .story-svg-container {
+.story-svg-container {
     overflow-x: scroll;
-    margin-right: 1ex;
 }
 
-.story-main-container .story-y-labels {
-    margin: 0 1ex;
+@media (width > 500px) {
+    .story-svg-container {
+        margin-right: 1ex;
+    }
+
+    .story-labels-container {
+        margin: 0 1ex;
+    }
+}
+
+@media (width <=500px) {
+    .story-labels-container {
+        margin-right: 1ex;
+        overflow-x: scroll;
+        width: 33vw;
+    }
 }

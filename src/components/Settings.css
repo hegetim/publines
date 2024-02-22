@@ -19,27 +19,60 @@
     font-style: italic;
 }
 
-.settings-inner-par {
-    margin-left: 1ex;
-    display: grid;
-    grid-template-columns: auto 1fr;
-    row-gap: 0.3ex;
+@media (width > 500px) {
+    .settings-inner-par {
+        margin-left: 1ex;
+        display: grid;
+        grid-template-columns: minmax(4rem, auto) minmax(auto, 1fr);
+        row-gap: 0.3ex;
+        column-gap: 1ex;
+    }
+
+    .settings-setting-oneline {
+        grid-column: span 2;
+    }
 }
 
-.settings-setting-input {
-    margin: 0 1ex;
+@media (width <=500px) {
+    .settings-inner-par {
+        display: flex;
+        flex-direction: column;
+        gap: 1ex;
+    }
 }
 
 input.settings-setting-input {
+    display: inline-block;
     width: 60px;
 }
 
-.settings-setting-oneline {
-    grid-column: span 2;
+.settings-setting-oneline svg {
+    margin-right: 0.5ex;
+}
+
+.settings-setting-oneline input {
+    margin: 0 0.5ex;
+}
+
+.settings-setting-oneline select {
+    margin-left: 0.5ex;
+}
+
+.settings-input-container svg {
+    margin: 0 0.5ex;
+}
+
+.settings-input-container input {
+    margin-right: 0.25ex;
 }
 
 .settings-select-provider,
 .settings-select-informal,
 .settings-select-algo {
     justify-self: start;
+    min-width: 100px;
+}
+
+.settings-input-container {
+    align-self: end;
 }
