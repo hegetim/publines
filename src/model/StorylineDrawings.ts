@@ -204,7 +204,7 @@ export const bbox2viewBox = (bbox: BBox) => ({
     height: bbox.height
 });
 
-/// see (outdated!) ../../docu/storylineUtils.pdf
+/// see ../../docu/storyline-utils.pdf
 interface ArcMetrics {
     kind: 'arc',
     cs: number,
