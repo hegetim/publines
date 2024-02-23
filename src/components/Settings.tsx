@@ -55,8 +55,12 @@ export const Settings = (props: Props) => {
                 <div className="settings-setting-label">author line thickness:</div>
                 <SelectButton<StyleConfig['authorLineThickness']> value={props.config.style.authorLineThickness}
                     setValue={key => props.updateConfig(lineThickness(key))} additionalClassNames={['settings-input-container']}
-                    labels={{ 'thin': "thin", 'normal': "normal", 'heavier': "heavier", 'fat': "fat" }} />
+                    labels={{ thin: "thin", normal: "normal", heavier: "heavier", fat: "fat" }} />
                 <ToggleMeetingStyleWidget {...props} />
+                <div className="settings-setting-label">crossings stretch:</div>
+                <SelectButton<StyleConfig['stretch']> value={props.config.style.stretch}
+                    setValue={key => props.updateConfig(stretch(key))} additionalClassNames={['settings-input-container']}
+                    labels={{ condensed: "condensed", normal: "normal", expanded: "expanded" }} />
                 <ToggleXAxisPosWidget {...props} />
                 <EnumerationStyleWidget {...props} />
             </div>
@@ -159,18 +163,20 @@ const parsePositiveOrElse = (raw: string, orElse: number) => {
 }
 
 const excludeInformal = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('data', 'filterInformal'), sanitize(raw, excludeInformalOpts, c.data.filterInformal), c)
+    O.set(O.compose('data', 'filterInformal'), sanitize(raw, excludeInformalOpts, c.data.filterInformal), c);
 
-const coauthorCap: (v: number | false) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'coauthorCap'))
+const coauthorCap: (v: number | false) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'coauthorCap'));
 
 const algoKind = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('algo', 'kind'), sanitize(raw, sbcmAlgos, c.algo.kind), c)
+    O.set(O.compose('algo', 'kind'), sanitize(raw, sbcmAlgos, c.algo.kind), c);
 
 const lineDist = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('style', 'lineDistance'), parsePositiveOrElse(raw, c.style.lineDistance), c)
+    O.set(O.compose('style', 'lineDistance'), parsePositiveOrElse(raw, c.style.lineDistance), c);
 
 const lineThickness: (key: StyleConfig['authorLineThickness']) => (c: UserConfig) => UserConfig =
-    O.set(O.compose('style', 'authorLineThickness'))
+    O.set(O.compose('style', 'authorLineThickness'));
+
+const stretch: (key: StyleConfig['stretch']) => (c: UserConfig) => UserConfig = O.set(O.compose('style', 'stretch'));
 
 type K1 = MeetingStyle['kind'];
 const toggleMeetingStyle: (c: UserConfig) => UserConfig = O.modify(O.compose('style', 'meetingStyle'), (s: K1) =>
@@ -187,7 +193,7 @@ const sanitize = <T extends readonly string[]>(value: string, options: T, orElse
     options.includes(value) ? value as TupleToUnion<T> : orElse;
 
 const mkOptions = <K extends string>(body: { [P in K]: string }) =>
-    Object.entries<string>(body).map(([value, text]) => <option key={value} value={value}>{text}</option>)
+    Object.entries<string>(body).map(([value, text]) => <option key={value} value={value}>{text}</option>);
 
 interface Props {
     config: UserConfig,

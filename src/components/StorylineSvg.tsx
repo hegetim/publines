@@ -4,7 +4,12 @@ import { DrawingConfig, DrawingResult, ProtoLabel, bbox2viewBox } from "../model
 import { matchByKind, matchString } from "../model/Util";
 import { selectColor } from "./StorylineComponent";
 
-export const StorylineSvg = (props: Props) => {
+export const StorylineSvg = (props: {
+    config: DrawingConfig,
+    drawn: DrawingResult,
+    meetingMeta: { title: string, informal: boolean }[],
+    authorNames: string[],
+}) => {
     const pathCommons = { fill: "none", strokeWidth: props.config.authorLineStrokeWidth };
     const bbox = props.drawn.bbox;
 
@@ -37,14 +42,3 @@ const mkLabelStyle = (label: ProtoLabel<'enum' | 'tick'>) => matchString(label.k
     'enum': () => ({ ...labelCommons, fill: "#808080" }),
     'tick': () => ({ ...labelCommons }),
 });
-
-export interface SelfRef {
-    getPathPos: (i: number, relPos: number) => DOMPoint | undefined,
-}
-
-interface Props {
-    config: DrawingConfig,
-    drawn: DrawingResult,
-    meetingMeta: { title: string, informal: boolean }[],
-    authorNames: string[],
-}

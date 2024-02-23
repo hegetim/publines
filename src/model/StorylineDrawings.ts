@@ -4,7 +4,7 @@ import { TupleToUnion, as, assertExhaustive, calcTextSize, matchByKind, matchStr
 
 export interface DrawingConfig {
     lineDist: number,
-    stretch: number,
+    stretch: Stretch,
     meetingStyle: MeetingStyle,
     enumerateMeetings: undefined | TupleToUnion<typeof enumerationStyles>,
     xAxisPos: 'top' | 'bottom',
@@ -16,6 +16,15 @@ export interface DrawingConfig {
     xAxisLabelMargin: number,
     labelLineSpacing: number,
     authorLineStrokeWidth: number,
+}
+
+export type Stretch = {
+    kind: 'arc',
+    relWidth: number,
+} | {
+    kind: 'bezier',
+    relWidth: number,
+    incline: number,
 }
 
 export type MeetingStyle = {
@@ -119,8 +128,6 @@ export const drawSections = (info: DrawingConfig, sections: Section[], initialPe
     }
     paths.forEach((_, i, self) => self[i] += ` H ${bbox.width}`);
 
-    console.log(yLabelPositions)
-
     return { paths, meetings, labels, bbox, yLabelPositions };
 }
 
@@ -197,69 +204,73 @@ export const bbox2viewBox = (bbox: BBox) => ({
     height: bbox.height
 });
 
-/// see ../../docu/storylineUtils.pdf
-interface BcMetrics {
-    info: DrawingConfig,
-    smallGroupAtTop: boolean,
+/// see (outdated!) ../../docu/storylineUtils.pdf
+interface ArcMetrics {
+    kind: 'arc',
+    cs: number,
+    ct: number,
+    ds: number,
+    dt: number,
+}
+
+interface BezierMetrics {
+    kind: 'bezier',
+    incline: number,
+}
+
+interface CommonMetrics {
+    lineDist: number,
     bc: [number, number, number]
-    p: number,
-    s: number,
-    k: number,
-    t: number,
     w: number,
 }
 
-const mkBcMetrics = (info: DrawingConfig, a: number, b: number, c: number) => {
-    const smallGroupAtTop = b - a + 1 <= c - b;
-    const p = b + 0.5 + (smallGroupAtTop ? 1 : -1) * info.stretch * (c - a);
-    const q = c - p + a;
-    const s = smallGroupAtTop ? 2 * p - a - b : b + c + 1 - 2 * p;
-    const w = Math.sqrt(s * s - (p - q) * (p - q));
-    const m = smallGroupAtTop ? b + (c - b + 1) / 2 : a + (b - a) / 2;
-    const n = c - m + a;
-    const f = Math.sqrt(s * s - (p - q) * (p - q) + (m - n) * (m - n));
-    const t = f * f / (2 * Math.sqrt(f * f - w * w));
-    const k = m + (smallGroupAtTop ? -1 : 1) * t / 2;
-    return as<BcMetrics>({ info, smallGroupAtTop, bc: [a, b, c], p, s, k, w, t });
+type BcMetrics = (ArcMetrics | BezierMetrics) & CommonMetrics;
+
+const mkBcMetrics = (info: DrawingConfig, a: number, b: number, c: number): BcMetrics => {
+    const w = (Math.max(b - a + 1, c - b) + Math.min(b - a, c - b - 1) / 2) * info.stretch.relWidth;
+    const common: CommonMetrics = { lineDist: info.lineDist, bc: [a, b, c], w };
+    const special: ArcMetrics | BezierMetrics = matchByKind(info.stretch, {
+        'bezier': bezier => ({ kind: 'bezier', incline: bezier.incline }),
+        'arc': () => {
+            const [s, t] = [c - b, b - a + 1];
+            const [rs, rt] = [(t * t + w * w) / (4 * t), (s * s + w * w) / (4 * s)];
+            return { kind: 'arc', cs: (b + c + 1) / 2 - rs, ct: (a + b) / 2 + rt, ds: 2 * rs, dt: 2 * rt };
+        },
+    })
+    return { ...common, ...special };
 }
 
-const bcWidth = (m: BcMetrics) => m.w * m.info.lineDist;
+const bcWidth = (m: BcMetrics) => m.w * m.lineDist;
 
 const bcY = (m: BcMetrics, startIndex: number) => {
     const [a, b, c] = m.bc;
-    return m.info.lineDist * (startIndex <= b ? startIndex + c - b : startIndex + a - b - 1);
+    return m.lineDist * (startIndex <= b ? startIndex + c - b : startIndex + a - b - 1);
 }
 
-const drawSLine = (m: BcMetrics, startIndex: number) => {
-    const [a, b, c] = m.bc;
-    const i = startIndex;
-    const isTL2BR = i <= b;
-
-    const [r1, r2, dx1, dx2, dy1, dy2] = (() => {
-        if (m.smallGroupAtTop) {
-            if (isTL2BR) {
-                const j = i + c - b;
-                const [dx1, dy1, r1] = [m.w * (m.p - i) / m.s, (j - i) * (m.p - i) / m.s, m.p - i];
-                return [r1, m.s - r1, dx1, m.w - dx1, dy1, j - i - dy1];
-            } else {
-                const j = i + a - b - 1;
-                const [dx1, dy1, r1] = [m.w * (i - m.k) / m.t, (j - i) * (i - m.k) / m.t, i - m.k];
-                return [r1, m.t - r1, dx1, m.w - dx1, dy1, j - i - dy1];
-            }
-        } else {
-            if (isTL2BR) {
-                const j = i + c - b;
-                const [dx1, dy1, r1] = [m.w * (m.k - i) / m.t, (j - i) * (m.k - i) / m.t, m.k - i];
-                return [r1, m.t - r1, dx1, m.w - dx1, dy1, j - i - dy1];
-            } else {
-                const j = i + a - b - 1;
-                const [dx1, dy1, r1] = [m.w * (i - m.p) / m.s, (j - i) * (i - m.p) / m.s, i - m.p];
-                return [r1, m.s - r1, dx1, m.w - dx1, dy1, j - i - dy1];
-            }
+const drawSLine = (bcm: BcMetrics, i: number): string => {
+    const [a, b, c, d] = [...bcm.bc, bcm.lineDist];
+    return matchByKind(bcm, {
+        'arc': m => {
+            const [r1, r2, dx1, dx2, dy1, dy2] = (() => {
+                if (i <= b) {
+                    const r1 = m.ct - i;
+                    const [dx1, dy1] = [(r1 / m.dt) * m.w, (r1 / m.dt) * (c - b)];
+                    return [r1, m.dt - r1, dx1, m.w - dx1, dy1, c - b - dy1];
+                } else {
+                    const r1 = i - m.cs;
+                    const [dx1, dy1] = [(r1 / m.ds) * m.w, (r1 / m.ds) * (a - b - 1)];
+                    return [r1, m.ds - r1, dx1, m.w - dx1, dy1, a - b - 1 - dy1];
+                }
+            })();
+            return `a ${r1 * d} ${r1 * d} 0 0 ${+(i <= b)} ${dx1 * d} ${dy1 * d}`
+                + ` a ${r2 * d} ${r2 * d} 0 0 ${+(i > b)} ${dx2 * d} ${dy2 * d}`;
+        },
+        'bezier': m => {
+            const e = m.incline;
+            return i <= b ?
+                `c ${e * m.w * d} 0 ${(1 - e) * m.w * d} ${(c - b) * d} ${m.w * d} ${(c - b) * d}` :
+                `c ${e * m.w * d} 0 ${(1 - e) * m.w * d} ${(a - b - 1) * d} ${m.w * d} ${(a - b - 1) * d}`;
         }
-    })();
-
-    const d = m.info.lineDist;
-    return `a ${r1 * d} ${r1 * d} 0 0 ${+isTL2BR} ${dx1 * d} ${dy1 * d}`
-        + ` a ${r2 * d} ${r2 * d} 0 0 ${+!isTL2BR} ${dx2 * d} ${dy2 * d}`;
+    },
+    );
 }
