@@ -1,0 +1,24 @@
+.metrics-outer-container {
+    grid-column: 2;
+}
+
+.metrics-collapsed {
+    overflow: hidden;
+    height: 0;
+}
+
+.metrics-header-container {
+    margin-bottom: 1ex;
+}
+
+.metrics-header-container * {
+    display: inline;
+}
+
+.metrics-inner-container {
+    margin-left: 2ex;
+    display: grid;
+    grid-template-columns: minmax(4rem, auto) minmax(auto, 1fr);
+    row-gap: 0.3ex;
+    column-gap: 2ex;
+}

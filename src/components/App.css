@@ -36,3 +36,7 @@ p.intro-par {
     display: grid;
     grid-template-columns: auto 1fr;
 }
+
+.click-me {
+    cursor: pointer;
+}

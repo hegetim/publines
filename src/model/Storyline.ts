@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { Author, Publication } from "./Metadata";
+import { as } from "./Util";
 
 export interface Storyline {
     authorIds: string[],
@@ -38,7 +39,7 @@ const mostFrequentKeys = <K, T>(map: Map<K, [T, number]>, limit: number) => {
 
 export type BlockCrossings = [number, number, number][];
 
-export interface SBCMRealization {
+export interface SbcmRealization {
     initialPermutation: number[],
     blockCrossings: BlockCrossings[],
 }
@@ -55,3 +56,24 @@ export const supportsMeeting = (perm: number[], meeting: number[]) => {
         return false;
     }
 }
+
+export interface Metrics {
+    crossings: number,
+    blockCrossings: number,
+    passages: number,
+}
+
+const sumM = (a: Metrics, b: Metrics): Metrics => ({
+    crossings: a.crossings + b.crossings,
+    blockCrossings: a.blockCrossings + b.blockCrossings,
+    passages: a.passages + b.passages
+});
+
+const zeroM: Metrics = { crossings: 0, blockCrossings: 0, passages: 0 };
+
+export const calcMetrics = (real: SbcmRealization) =>
+    real.blockCrossings.flatMap(x => x).map(([a, b, c]) => as<Metrics>({
+        crossings: (b - a + 1) * (c - b),
+        blockCrossings: 1,
+        passages: c - a + 1,
+    })).reduce(sumM, zeroM)

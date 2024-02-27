@@ -14,7 +14,7 @@ export const Settings = (props: Props) => {
     const [isCollapsed, setCollapsed] = useState(true);
 
     return <div className="settings-outer-container">
-        <div {...cls('settings-header-container', 'settings-click-me')} onClick={() => setCollapsed(s => !s)}>
+        <div {...cls('settings-header-container', 'click-me')} onClick={() => setCollapsed(s => !s)}>
             <FontAwesomeIcon className="settings-collapse-icon" fixedWidth icon={isCollapsed ? faChevronRight : faChevronDown} />
             <span className="settings-outer-header">Settings</span>
         </div>
@@ -87,7 +87,7 @@ const CoauthorCapWidget = (props: Props) => {
     }
 
     return <div className="settings-setting-oneline">
-        <span className="settings-click-me" onClick={toggleDisable}>
+        <span className="click-me" onClick={toggleDisable}>
             <FontAwesomeIcon className="settings-setting-input"
                 icon={props.config.data.coauthorCap === false ? faToggleOff : faToggleOn} />
             <span className="settings-setting-label">show only top</span>
@@ -102,7 +102,7 @@ const ToggleMeetingStyleWidget = (props: Props) => {
     const selectRight = matchString(props.config.style.meetingStyle, { 'metro': () => false, 'bar': () => true });
     return <React.Fragment>
         <div className="settings-setting-label">draw meetings as:</div>
-        <div onClick={() => props.updateConfig(toggleMeetingStyle)} {...cls('settings-click-me', 'settings-input-container')}>
+        <div onClick={() => props.updateConfig(toggleMeetingStyle)} {...cls('click-me', 'settings-input-container')}>
             <span className="settings-setting-label">metro station</span>
             <FontAwesomeIcon className="settings-setting-input" icon={faToggleOff} {...(selectRight ? { flip: 'horizontal' } : {})} />
             <span className="settings-setting-label">vertical bar</span>
@@ -114,7 +114,7 @@ const ToggleXAxisPosWidget = (props: Props) => {
     const selectRight = matchString(props.config.style.xAxisPosition, { 'top': () => false, 'bottom': () => true });
     return <React.Fragment>
         <div className="settings-setting-label">place x-axis at:</div>
-        <div onClick={() => props.updateConfig(toggleXAxisPos)} {...cls('settings-click-me', 'settings-input-container')}>
+        <div onClick={() => props.updateConfig(toggleXAxisPos)} {...cls('click-me', 'settings-input-container')}>
             <span className="settings-setting-label">top</span>
             <FontAwesomeIcon className="settings-setting-input" icon={faToggleOff} {...(selectRight ? { flip: 'horizontal' } : {})} />
             <span className="settings-setting-label">bottom</span>
@@ -141,7 +141,7 @@ const EnumerationStyleWidget = (props: Props) => {
     }
 
     return <div className="settings-setting-oneline">
-        <span className="settings-click-me" onClick={toggleDisable}>
+        <span className="click-me" onClick={toggleDisable}>
             <FontAwesomeIcon className="settings-setting-input"
                 icon={props.config.style.enumerationStyle ? faToggleOn : faToggleOff} />
             <span className="settings-setting-label">enumerate publications as</span>

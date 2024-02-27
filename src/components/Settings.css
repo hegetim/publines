@@ -3,10 +3,6 @@
     height: 0;
 }
 
-.settings-click-me {
-    cursor: pointer;
-}
-
 .settings-inner-container {
     margin: 1ex 0 0 2ex;
     display: flex;

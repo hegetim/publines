@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { SBCMRealization, Storyline, applyBc, supportsMeeting } from "./Storyline";
+import { SbcmRealization, Storyline, applyBc, supportsMeeting } from "./Storyline";
 import { Publication } from "./Metadata";
 
 export type Section = MeetingSect | BlockCrossingSect | EmptySect
@@ -22,7 +22,7 @@ export interface EmptySect {
     kind: 'empty'
 }
 
-export const mkSections = (story: Storyline, realization: SBCMRealization, publ: Publication[]) => {
+export const mkSections = (story: Storyline, realization: SbcmRealization, publ: Publication[]) => {
     let perm = realization.initialPermutation;
     // console.log({ init: realization.initialPermutation, story })
     const result: Section[] = []; // mutable :(
