@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import _ from "lodash";
 import * as O from 'optics-ts/standalone';
 import './Settings.css';
-import { AlgoConfig, StyleConfig, UserConfig, sbcmAlgos } from "../model/UserConfig";
+import { AlgoConfig, DataConfig, StyleConfig, UserConfig, dataSources, sbcmAlgos } from "../model/UserConfig";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight, faToggleOff, faToggleOn } from "@fortawesome/free-solid-svg-icons";
 import { TupleToUnion, cls, matchString } from "../model/Util";
@@ -22,12 +22,13 @@ export const Settings = (props: Props) => {
             <div className="settings-inner-header">Data Source</div>
             <div className="settings-inner-par">
                 <div className="settings-setting-label">data provider:</div>
-                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-provider')}>
-                    <option>DBLP.org</option>
+                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-provider')}
+                    value={props.config.data.source} onChange={x => props.updateConfig(dataSource(x.target.value))}>
+                    {...mkOptions<DataConfig['source']>({ 'dblp': "dblp.org", 'playground': "playground" })}
                 </select>
                 <div className="settings-setting-label">exclude informal publications:</div>
                 <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-informal')}
-                    value={props.config.data.filterInformal} onChange={x => props.updateConfig(excludeInformal(x.target.value))}>
+                    value={props.config.data.excludeInformal} onChange={x => props.updateConfig(excludeInformal(x.target.value))}>
                     {...mkOptions<ExcludeInformal>({
                         'all': "exclude all",
                         'repeated': "exclude repeated titles",
@@ -162,8 +163,11 @@ const parsePositiveOrElse = (raw: string, orElse: number) => {
     return res > 0 ? res : orElse;
 }
 
+const dataSource = (raw: string) => (c: UserConfig) =>
+    O.set(O.compose('data', 'source'), sanitize(raw, dataSources, c.data.source), c);
+
 const excludeInformal = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('data', 'filterInformal'), sanitize(raw, excludeInformalOpts, c.data.filterInformal), c);
+    O.set(O.compose('data', 'excludeInformal'), sanitize(raw, excludeInformalOpts, c.data.excludeInformal), c);
 
 const coauthorCap: (v: number | false) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'coauthorCap'));
 

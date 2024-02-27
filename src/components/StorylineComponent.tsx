@@ -4,7 +4,7 @@ import "./Storyline.css"
 import { Author, Publication, filterInformal } from "../model/Metadata"
 import { DrawingConfig, DrawingResult, drawSections } from "../model/StorylineDrawings"
 import { mkSections } from "../model/Sections"
-import { SbcmRealization, mkStoryline } from "../model/Storyline"
+import { SbcmRealization, Storyline, mkStoryline } from "../model/Storyline"
 import { oneSidedScm } from "../model/OneSided"
 import { twoSidedScm } from "../model/TwoSided"
 import { StorylineSvg } from "./StorylineSvg"
@@ -17,23 +17,26 @@ export const StorylineComponent = (props: {
     config: UserConfig,
     publications: Publication[],
     protagonist: Author,
+    story: Storyline,
+    authors: Map<string, Author>,
 }) => {
-    const filtered = filterInformal(props.publications, props.config.data.filterInformal);
-    const [story, authors] = mkStoryline(filtered, props.protagonist, props.config.data.coauthorCap);
     const realization: SbcmRealization = matchByKind(props.config.algo, {
-        '1scm': () => oneSidedScm(story),
-        '2scm': () => twoSidedScm(story),
+        '1scm': () => oneSidedScm(props.story),
+        '2scm': () => twoSidedScm(props.story),
     });
-    const authorNames = story.authorIds.map(id => authors.get(id)!.name);
+    const authorNames = props.story.authorIds.map(id => props.authors.get(id)!.name);
     const drawingConfig = mkDrawingConfig(props.config.style)
 
-    const sections = mkSections(story, realization, filtered)!;
+    const sections = mkSections(props.story, realization, props.publications)!;
     const drawn = drawSections(drawingConfig, sections, realization.initialPermutation);
+
+    console.log('rendered storyline component (this draws a storyline)')
 
     return <React.Fragment>
         <div className="story-main-container">
             <InnerComponent authorNames={authorNames} drawingConfig={drawingConfig} drawn={drawn}
-                meetingMeta={filtered.map(p => ({ title: p.title, informal: p.informal }))} realization={realization} />
+                meetingMeta={props.publications.map(p => ({ title: p.title, informal: p.informal }))}
+                realization={realization} />
         </div>
         <MetricsComponent data={realization} />
     </React.Fragment>

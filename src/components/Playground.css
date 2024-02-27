@@ -1,0 +1,18 @@
+.playground-main-container {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    row-gap: 0.3ex;
+    column-gap: 1ex;
+}
+
+.playground-main-header {
+    grid-column: 1 / span 3;
+}
+
+.playground-main-area {
+    grid-column: 1 / span 3;
+}
+
+.playground-error-span {
+    font-style: italic;
+}

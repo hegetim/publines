@@ -72,7 +72,7 @@ const sumM = (a: Metrics, b: Metrics): Metrics => ({
 const zeroM: Metrics = { crossings: 0, blockCrossings: 0, passages: 0 };
 
 export const calcMetrics = (real: SbcmRealization) =>
-    real.blockCrossings.flatMap(x => x).map(([a, b, c]) => as<Metrics>({
+    real.blockCrossings.flat().map(([a, b, c]) => as<Metrics>({
         crossings: (b - a + 1) * (c - b),
         blockCrossings: 1,
         passages: c - a + 1,

@@ -1,17 +1,20 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
 import _ from 'lodash';
 import * as Dblp from '../model/Dblp';
-import { Author, Publication } from '../model/Metadata';
+import { Author, ExcludeInformal, Publication, filterInformal } from '../model/Metadata';
 import { MainAuthor } from './MainAuthor';
 import { StorylineComponent } from './StorylineComponent';
-import { configDefaults } from '../model/UserConfig';
+import { UserConfig, configDefaults } from '../model/UserConfig';
 import { Settings } from './Settings';
+import { Storyline, mkStoryline } from '../model/Storyline';
+import { Playground, PlaygroundData, fakeMainAuthor, fakePublications, fromStoryline } from './Playground';
 
 const App = () => {
     const [config, setConfig] = useState(configDefaults);
     const [mainAuthor, setMainAuthor] = useState<Author | undefined>();
     const [publications, setPublications] = useState<Publication[] | 'error' | undefined>();
+    const [playgroundData, setPlaygroundData] = useState<PlaygroundData>({ meetings: [] });
 
     const handleAuthorChanged = useCallback(async (author: Author) => {
         const fetched = await Dblp.loadPublications(author.id);
@@ -25,27 +28,53 @@ const App = () => {
         setMainAuthor(author);
     }, [setPublications, setMainAuthor]);
 
-    const renderPublications = () => {
-        if (!publications || !mainAuthor) {
-            return [];
-        } else if (publications === 'error') {
-            return <span className='story-main-error'>Could not load publications</span>;
-        } else if (publications.length === 0) {
-            return <span className='story-main-empty'>{`${mainAuthor} has no publications`}</span>;
+    const handlePlaygroundRevert = useCallback(() => {
+        if (publications && mainAuthor && publications !== 'error') {
+            const { story } = handlePublications(publications, mainAuthor, config);
+            return fromStoryline(story);
         } else {
-            return <StorylineComponent config={config} protagonist={mainAuthor} publications={publications} />
+            return { meetings: [] };
         }
-    }
+    }, [publications, mainAuthor, config]);
 
-    return (
-        <div className="App" >
-            <h1>Publines</h1>
-            <p className='intro-par'>Visualize joint publications with your coauthors over time.</p>
-            <MainAuthor author={mainAuthor} setAuthor={handleAuthorChanged} fetchAuthors={fetchAuthors} />
-            <Settings config={config} updateConfig={setConfig} />
-            {renderPublications()}
-        </div >
-    );
+    return <div className="App">
+        <h1>Publines</h1>
+        <p className='intro-par'>Visualize joint publications with your coauthors over time.</p>
+        {config.data.source === 'dblp'
+            ? <MainAuthor author={mainAuthor} setAuthor={handleAuthorChanged} fetchAuthors={fetchAuthors} />
+            : <Playground data={playgroundData} setData={setPlaygroundData} rebuildData={handlePlaygroundRevert} />}
+        <Settings config={config} updateConfig={setConfig} />
+        {config.data.source === 'dblp'
+            ? <PublicationsComponent publications={publications} mainAuthor={mainAuthor} config={config} />
+            : <PublicationsComponent publications={fakePublications(playgroundData)} mainAuthor={fakeMainAuthor}
+                config={config} />}
+    </div>;
+}
+
+const PublicationsComponent = (props: {
+    publications: Publication[] | 'error' | undefined,
+    mainAuthor: Author | undefined,
+    config: UserConfig,
+}) => {
+    if (!props.publications || !props.mainAuthor) {
+        return [];
+    } else if (props.publications === 'error') {
+        return <span className='story-main-error'>Could not load publications</span>;
+    } else if (props.publications.length === 0) {
+        return <span className='story-main-empty'>{`${props.mainAuthor.name} has no publications`}</span>;
+    } else {
+        console.log({ note: 'at publications component', publications: props.publications, main: props.mainAuthor })
+        const res = handlePublications(props.publications, props.mainAuthor, props.config);
+        console.log('rendered publication component (this builds a storyline)')
+        return <StorylineComponent config={props.config} protagonist={props.mainAuthor} publications={res.filtered}
+            story={res.story} authors={res.authors} />
+    }
+}
+
+const handlePublications = (publications: Publication[], mainAuthor: Author, config: UserConfig) => {
+    const filtered = filterInformal(publications, config.data.excludeInformal);
+    const [story, authors] = mkStoryline(filtered, mainAuthor, config.data.coauthorCap);
+    return { filtered, story, authors };
 }
 
 const fetchAuthors = (s: string) => Dblp.findAuthor(s)

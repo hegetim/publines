@@ -18,7 +18,9 @@
 .App h1,
 .App p,
 .author-name-container,
-.settings-outer-container {
+.playground-main-container,
+.settings-outer-container,
+.story-main-empty {
     grid-column: 2;
 }
 

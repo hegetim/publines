@@ -18,10 +18,12 @@ export interface StyleConfig {
 }
 
 export interface DataConfig {
-    source: 'Dblp',
-    filterInformal: ExcludeInformal,
+    source: TupleToUnion<typeof dataSources>,
+    excludeInformal: ExcludeInformal,
     coauthorCap: number | false,
 }
+
+export const dataSources = ['dblp', 'playground'] as const;
 
 export interface AlgoConfig {
     kind: TupleToUnion<typeof sbcmAlgos>
@@ -61,7 +63,7 @@ export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
 
 export const configDefaults: UserConfig = {
     algo: { kind: '2scm' },
-    data: { source: 'Dblp', filterInformal: 'repeated', coauthorCap: 10 },
+    data: { source: 'dblp', excludeInformal: 'repeated', coauthorCap: 10 },
     style: {
         lineDistance: 24,
         meetingStyle: 'metro',

@@ -54,3 +54,21 @@ type Tail<T extends readonly any[] = readonly []> = T extends readonly [infer _,
 export const tail = <T extends readonly any[]>(tuple: readonly [...T]) => tuple.slice(1) as readonly any[] as Tail<T>
 
 export type TupleToUnion<T extends readonly string[]> = (T)[number]
+
+export const toCharBase = (n: number) => {
+    let res = '';
+    while (n >= 0) {
+        const char = n % 26;
+        res = String.fromCharCode(65 + char) + res;
+        n = n / 26 - 1;
+    }
+    return res;
+}
+
+export const expectIntOrFail = (a: any) => {
+    if (typeof a === 'number' || typeof a === 'bigint') {
+        const n = Number(a);
+        if (Number.isInteger(n)) { return n; }
+    }
+    throw new TypeError(`${a} is not an int`);
+}
