@@ -1,0 +1,23 @@
+.bib-collapsed {
+    overflow: hidden;
+    height: 0;
+}
+
+.bib-inner-container {
+    margin: 1ex 0 0 2ex;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 2ex;
+}
+
+.bib-entry-number {
+    color: #808080;
+}
+
+.bib-entry-booktitle {
+    font-style: italic;
+}
+
+.bib-entry-missing {
+    font-weight: bold;
+}

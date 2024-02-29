@@ -63,7 +63,7 @@ export const fakePublications = (data: PlaygroundData) => {
         title: `fake publication ${j}`,
         authors: indices.map(i => authors[i]!),
         informal: false,
-        published: 'fake',
+        metadata: { kind: 'incomplete', desc: "fake", link: undefined, pages: undefined },
         url: new URL('http://example.org'),
         year: 1984,
     }));

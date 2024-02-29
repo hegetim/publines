@@ -1,14 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import './App.css';
 import _ from 'lodash';
 import * as Dblp from '../model/Dblp';
-import { Author, ExcludeInformal, Publication, filterInformal } from '../model/Metadata';
+import { Author, Publication, filterInformal } from '../model/Metadata';
 import { MainAuthor } from './MainAuthor';
 import { StorylineComponent } from './StorylineComponent';
 import { UserConfig, configDefaults } from '../model/UserConfig';
 import { Settings } from './Settings';
-import { Storyline, mkStoryline } from '../model/Storyline';
+import { mkStoryline } from '../model/Storyline';
 import { Playground, PlaygroundData, fakeMainAuthor, fakePublications, fromStoryline } from './Playground';
+import { Bibliography } from './Bibliography';
 
 const App = () => {
     const [config, setConfig] = useState(configDefaults);
@@ -45,15 +46,17 @@ const App = () => {
             : <Playground data={playgroundData} setData={setPlaygroundData} rebuildData={handlePlaygroundRevert} />}
         <Settings config={config} updateConfig={setConfig} />
         {config.data.source === 'dblp'
-            ? <PublicationsComponent publications={publications} mainAuthor={mainAuthor} config={config} />
+            ? <PublicationsComponent publications={publications} mainAuthor={mainAuthor} config={config}
+                setMainAuthor={handleAuthorChanged} />
             : <PublicationsComponent publications={fakePublications(playgroundData)} mainAuthor={fakeMainAuthor}
-                config={config} />}
+                config={config} setMainAuthor={handleAuthorChanged} />}
     </div>;
 }
 
 const PublicationsComponent = (props: {
     publications: Publication[] | 'error' | undefined,
     mainAuthor: Author | undefined,
+    setMainAuthor: (a: Author) => void,
     config: UserConfig,
 }) => {
     if (!props.publications || !props.mainAuthor) {
@@ -66,8 +69,11 @@ const PublicationsComponent = (props: {
         console.log({ note: 'at publications component', publications: props.publications, main: props.mainAuthor })
         const res = handlePublications(props.publications, props.mainAuthor, props.config);
         console.log('rendered publication component (this builds a storyline)')
-        return <StorylineComponent config={props.config} protagonist={props.mainAuthor} publications={res.filtered}
-            story={res.story} authors={res.authors} />
+        return <React.Fragment>
+            <StorylineComponent config={props.config} protagonist={props.mainAuthor} publications={res.filtered}
+                story={res.story} authors={res.authors} />
+            <Bibliography config={props.config.style} publications={res.filtered} setMainAuthor={props.setMainAuthor} />
+        </React.Fragment>
     }
 }
 

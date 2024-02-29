@@ -1,5 +1,5 @@
-import { Author, Publication } from "./Metadata";
-import { as } from "./Util";
+import { Author, BibMeta, Publication } from "./Metadata";
+import { as, matchByKind, matchString } from "./Util";
 
 interface DblpAuthorSearch {
     result: {
@@ -77,10 +77,10 @@ export const parsePublications = (raw: string) => {
     for (const node of rs) {
         const entry = node.firstChild!;
         const tpe = entry.nodeName.toLowerCase();
-        if (tpe === "article" || tpe === "inproceedings" || tpe === "incollection" || tpe === "book" || tpe === "phdthesis") {
+        if (tpe === "article" || tpe === "inproceedings" || tpe === "incollection" || tpe === "phdthesis") {
             const informal = !!node.querySelector('*[publtype*="informal"]');
             const url = new URL(`https://dblp.org/${node.querySelector('* url')?.textContent}`);
-            const year = Number.parseInt(node.querySelector('* year')?.textContent ?? "-1");
+            const year = Number.parseInt(node.querySelector('* year')?.textContent ?? "NaN");
             // todo parse bibliographic information like pages, journal, volume, booktitle, ...
             const title = node.querySelector('* title')?.textContent ?? "untitled";
             let authors: Author[] = [];
@@ -90,11 +90,74 @@ export const parsePublications = (raw: string) => {
                     authors.push({ id: pid, name: elem.textContent ?? "" });
                 }
             }
-            res.push({ title, authors, year, url, informal, published: tpe });
-        } // ignore publications of types "proceedings", "masterthesis", "www"
+            res.push({ title, authors, year, url, informal, metadata: parseBibMeta(node, tpe) });
+        } // ignore publications of types "proceedings", "masterthesis", "www", "book"
     }
     return res;
 };
+
+const parseBibMeta = (r: Element, tpe: BibMeta['kind']): BibMeta => {
+    const pages = parsePages(r.querySelector('* pages')?.textContent);
+    const link = parseLink(r.querySelector('* ee')?.textContent);
+    const journal = r.querySelector('* journal')?.textContent;
+    const volume = r.querySelector('* volume')?.textContent;
+    const number = Number.parseInt(r.querySelector('* number')?.textContent ?? "NaN");
+    const booktitle = r.querySelector('* booktitle')?.textContent;
+    const school = r.querySelector('* school')?.textContent;
+    return matchString(tpe, {
+        article: () => {
+            if (journal && volume) {
+                return { kind: 'article', journal, volume, number: number ? number : undefined, pages, link };
+            } else { return parseBibMeta(r, 'incomplete'); }
+        },
+        incollection: () => {
+            if (booktitle) { return { kind: 'incollection', booktitle, pages, link }; }
+            else { return parseBibMeta(r, 'incomplete'); }
+        },
+        inproceedings: () => {
+            if (booktitle) { return { kind: 'inproceedings', booktitle, pages, link }; }
+            else { return parseBibMeta(r, 'incomplete'); }
+        },
+        masterthesis: () => {
+            if (school) { return { kind: 'masterthesis', school, pages, link }; }
+            else { return parseBibMeta(r, 'incomplete'); }
+        },
+        phdthesis: () => {
+            if (school) { return { kind: 'masterthesis', school, pages, link }; }
+            else { return parseBibMeta(r, 'incomplete'); }
+        },
+        incomplete: () => {
+            return { kind: 'incomplete', desc: tpe, link, pages: undefined };
+        },
+    });
+}
+
+const parsePages = (raw: string | null | undefined): BibMeta['pages'] => {
+    if (raw === null || raw === undefined) {
+        return undefined;
+    } else {
+        const matches = raw.match(/^([\d:]+)-([\d:]+)$/);
+        if (matches && matches.length === 3) {
+            const from = matches[1]!;
+            const to = matches[2]!;
+            if (from !== to) {
+                return { from, to };
+            } else {
+                return from;
+            }
+        }
+        return raw;
+    }
+}
+
+const parseLink = (raw: string | null | undefined): BibMeta['link'] => {
+    if (!raw) { return undefined; }
+    try {
+        return new URL(raw);
+    } catch (_ignored) {
+        return undefined;
+    }
+}
 
 /*
 Publication records are inspired by the BibTeX syntax and are given by one of the following elements:

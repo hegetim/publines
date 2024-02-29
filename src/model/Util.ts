@@ -72,3 +72,9 @@ export const expectIntOrFail = (a: any) => {
     }
     throw new TypeError(`${a} is not an int`);
 }
+
+export const hash = (o: any): number => Array.from(JSON.stringify(o))
+    .reduce((acc, n) => (acc * 17 + (n.codePointAt(0) ?? 0)) % 4294967296, 43);
+
+export const intersperse = <T>(ts: T[], f: (before: T, i: number) => T) =>
+    ts.reduce((acc, t, i) => i === ts.length - 1 ? [...acc, t] : [...acc, t, f(t, i)], [] as T[])

@@ -1,6 +1,7 @@
 .App {
     display: grid;
     row-gap: 2ex;
+    margin-bottom: 4em;
 }
 
 @media (width > 800px) {
@@ -20,7 +21,8 @@
 .author-name-container,
 .playground-main-container,
 .settings-outer-container,
-.story-main-empty {
+.story-main-empty,
+.bib-outer-container {
     grid-column: 2;
 }
 
