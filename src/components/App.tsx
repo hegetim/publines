@@ -10,27 +10,30 @@ import { Settings } from './Settings';
 import { mkStoryline } from '../model/Storyline';
 import { Playground, PlaygroundData, fakeMainAuthor, fakePublications, fromStoryline } from './Playground';
 import { Bibliography } from './Bibliography';
+import { Loading } from './Commons';
 
 const App = () => {
     const [config, setConfig] = useState(configDefaults);
     const [mainAuthor, setMainAuthor] = useState<Author | undefined>();
-    const [publications, setPublications] = useState<Publication[] | 'error' | undefined>();
+    const [publications, setPublications] = useState<FetchedPublications>();
     const [playgroundData, setPlaygroundData] = useState<PlaygroundData>({ meetings: [] });
 
-    const handleAuthorChanged = useCallback(async (author: Author) => {
-        const fetched = await Dblp.loadPublications(author.id);
-        if (fetched === 'error' || fetched === 'not_ok') {
-            setPublications('error');
-        } else {
-            let parsed: Publication[] | 'error' = Dblp.parsePublications(fetched.raw);
-            if (parsed !== 'error') { parsed = _.sortBy(parsed, p => p.year); }
-            setPublications(parsed);
-        }
+    const handleAuthorChanged = useCallback((author: Author) => {
+        setPublications('loading');
         setMainAuthor(author);
+        Dblp.loadPublications(author.id).then(fetched => {
+            if (fetched === 'error' || fetched === 'not_ok') {
+                setPublications('error');
+            } else {
+                let parsed: Publication[] | 'error' = Dblp.parsePublications(fetched.raw);
+                if (parsed !== 'error') { parsed = _.sortBy(parsed, p => p.year); }
+                setPublications(parsed);
+            }
+        });
     }, [setPublications, setMainAuthor]);
 
     const handlePlaygroundRevert = useCallback(() => {
-        if (publications && mainAuthor && publications !== 'error') {
+        if (publications && mainAuthor && publications !== 'error' && publications !== 'loading') {
             const { story } = handlePublications(publications, mainAuthor, config);
             return fromStoryline(story);
         } else {
@@ -53,8 +56,10 @@ const App = () => {
     </div>;
 }
 
+type FetchedPublications = Publication[] | 'error' | 'loading' | undefined;
+
 const PublicationsComponent = (props: {
-    publications: Publication[] | 'error' | undefined,
+    publications: FetchedPublications,
     mainAuthor: Author | undefined,
     setMainAuthor: (a: Author) => void,
     config: UserConfig,
@@ -63,16 +68,18 @@ const PublicationsComponent = (props: {
         return [];
     } else if (props.publications === 'error') {
         return <span className='story-main-error'>Could not load publications</span>;
+    } else if (props.publications === 'loading') {
+        return <Loading className={['story-main-loading']} />;
     } else if (props.publications.length === 0) {
         return <span className='story-main-empty'>{`${props.mainAuthor.name} has no publications`}</span>;
     } else {
-        console.log({ note: 'at publications component', publications: props.publications, main: props.mainAuthor })
         const res = handlePublications(props.publications, props.mainAuthor, props.config);
         console.log('rendered publication component (this builds a storyline)')
         return <React.Fragment>
             <StorylineComponent config={props.config} protagonist={props.mainAuthor} publications={res.filtered}
                 story={res.story} authors={res.authors} />
-            <Bibliography config={props.config.style} publications={res.filtered} setMainAuthor={props.setMainAuthor} />
+            <Bibliography enumStyle={props.config.style.enumerationStyle} publications={res.filtered}
+                setMainAuthor={props.setMainAuthor} />
         </React.Fragment>
     }
 }

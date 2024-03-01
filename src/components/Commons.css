@@ -1,0 +1,41 @@
+.loading-container {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: center;
+    column-gap: 1ex;
+    width: 160px;
+}
+
+.loading-main-icon path {
+    animation: color-spin 2.5s infinite;
+}
+
+@keyframes color-spin {
+    0% {
+        fill: #063d79;
+    }
+
+    10% {
+        fill: #063d79;
+    }
+
+    28% {
+        fill: #ffa630;
+    }
+
+    46% {
+        fill: #44a1a0;
+    }
+
+    64% {
+        fill: #78cdd7;
+    }
+
+    82% {
+        fill: #cd4631;
+    }
+
+    100% {
+        fill: #063d79;
+    }
+}

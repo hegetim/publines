@@ -22,6 +22,7 @@
 .playground-main-container,
 .settings-outer-container,
 .story-main-empty,
+.story-main-loading,
 .bib-outer-container {
     grid-column: 2;
 }

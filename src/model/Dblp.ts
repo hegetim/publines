@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { Author, BibMeta, Publication } from "./Metadata";
 import { as, matchByKind, matchString } from "./Util";
 
@@ -12,7 +13,7 @@ interface DblpAuthorSearchHit {
     info: {
         author: string,
         url: string,
-        notes?: { note: { text: string } },
+        notes?: { note: any },
     }
 }
 
@@ -32,10 +33,18 @@ export const findAuthor = async (name: string) => {
     }
 };
 
+const parseNotes = (note: any) => {
+    if (note) {
+        if (_.isArray(note)) { return note[0].text as string | undefined; }
+        else { return note.text as string | undefined; }
+    }
+    return undefined;
+}
+
 export const mkSuggestions = (search: DblpAuthorSearch): [string, Author][] => {
     if (search.result.hits.hit) {
         return search.result.hits.hit.map(hit => {
-            const hint = `${hit.info.author}${hit.info.notes ? ` (${hit.info.notes.note.text})` : ""}`;
+            const hint = `${hit.info.author}${hit.info.notes ? ` (${parseNotes(hit.info.notes.note)})` : ""}`;
             const id = (hit.info.url.match(/\w+\/[A-Za-z0-9_-]+$/) ?? [])[0];
             if (!id) {
                 console.warn(`could not extract id from ${hit.info.url}`);

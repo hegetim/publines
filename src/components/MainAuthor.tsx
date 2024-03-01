@@ -5,8 +5,9 @@ import { Author } from "../model/Metadata";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencil } from "@fortawesome/free-solid-svg-icons";
 import { assertExhaustive, cls } from "../model/Util";
+import { Loading } from "./Commons";
 
-type FetchedAuthors = [string, Author][] | 'error' | 'init';
+type FetchedAuthors = [string, Author][] | 'error' | 'init' | 'loading';
 
 export const MainAuthor = (props: {
     author: Author | undefined,
@@ -24,7 +25,10 @@ export const MainAuthor = (props: {
 
     const handleTyping = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const str = e.target.value;
-        if (str !== '') { debouncedFetch(str); }
+        if (str !== '') {
+            setResultsList('loading');
+            debouncedFetch(str);
+        }
         setSearchString(str);
     }, [debouncedFetch, setSearchString]);
 
@@ -32,6 +36,7 @@ export const MainAuthor = (props: {
         if (resultsList === 'error') {
             return <span className="author-results-error">could not search for authors</span>;
         } else if (resultsList === 'init') { return ""; }
+        else if (resultsList === 'loading') { return <Loading />; }
         else if (resultsList.length === 0) {
             return <span className="author-results-empty">no results found</span>;
         } else if (resultsList) {

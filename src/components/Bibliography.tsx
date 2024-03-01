@@ -7,7 +7,7 @@ import { Author, BibMeta, Publication } from "../model/Metadata";
 import { StyleConfig } from "../model/UserConfig";
 
 export const Bibliography = (props: {
-    config: StyleConfig,
+    enumStyle: StyleConfig['enumerationStyle'],
     publications: Publication[],
     setMainAuthor: (author: Author) => void,
 }) => {
@@ -41,9 +41,9 @@ export const Bibliography = (props: {
             <span key="pages" className="bib-entry-coords">{renderProceedingPages(p.metadata)}</span>,
         ] : assertExhaustive(p.metadata.kind);
         const year = <span key="year" className="bib-entry-year">{p.year}.</span>
-        return <React.Fragment>
-            <div key={`enum${i}`} className="bib-entry-number">{mkEnumeratedLabel(props.config, i + 1)}</div>
-            <div key={hash(p)} className="bib-entry-par">{[...authors, title, ...ref, year]}</div>
+        return <React.Fragment key={hash(p)}>
+            <div className="bib-entry-number">{mkEnumeratedLabel(props.enumStyle, i + 1)}</div>
+            <div className="bib-entry-par">{[...authors, ...title, ...ref, year]}</div>
         </React.Fragment>;
     };
 
@@ -69,9 +69,8 @@ const renderProceedingPages = (m: BibMeta) =>
 
 const mkHref = (p: Publication) => p.metadata.link ? p.metadata.link.toString() : p.url.toString();
 
-const mkEnumeratedLabel = (info: StyleConfig, i: number) =>
-    !info.enumerationStyle ? `${i}.` : matchString(info.enumerationStyle, {
-        'x': () => i.toString(),
-        'x.': () => `${i}.`,
-        '[x]': () => `[${i}]`,
-    });
+const mkEnumeratedLabel = (style: StyleConfig['enumerationStyle'], i: number) => matchString(style ?? 'x.', {
+    'x': () => i.toString(),
+    'x.': () => `${i}.`,
+    '[x]': () => `[${i}]`,
+});
