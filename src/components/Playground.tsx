@@ -37,7 +37,7 @@ export const Playground = (props: {
     return <div className="playground-main-container">
         <div className="playground-main-header">Playground</div>
         <textarea className="playground-main-area" rows={5} value={text} onChange={handleTextChange} />
-        <button className="playground-revert-btn" disabled={state === 'submitted'} onClick={handleRevert}>revert</button>
+        <button className="playground-revert-btn" onClick={handleRevert}>revert</button>
         <button className="playground-submit-btn" disabled={state === 'submitted'} onClick={handleSubmit}>submit</button>
         <span {...cls('playground-error-span', { 'playground-error-present': isError(state) })}>{getErrorMsg(state)}</span>
     </div>;
@@ -60,7 +60,7 @@ export const fakePublications = (data: PlaygroundData) => {
     const max = Math.max(0, ...data.meetings.flat());
     const authors = Array.from({ length: max + 1 }, (_, i): Author => ({ id: `fake${i}`, name: toCharBase(i) }));
     return data.meetings.map((indices, j): Publication => ({
-        title: `fake publication ${j}`,
+        title: `fake publication ${j}.`,
         authors: indices.map(i => authors[i]!),
         informal: false,
         metadata: { kind: 'incomplete', desc: "fake", link: undefined, pages: undefined },

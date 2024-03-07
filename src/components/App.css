@@ -23,6 +23,7 @@
 .settings-outer-container,
 .story-main-empty,
 .story-main-loading,
+.story-main-error,
 .bib-outer-container {
     grid-column: 2;
 }

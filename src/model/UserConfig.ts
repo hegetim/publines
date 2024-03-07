@@ -48,7 +48,7 @@ export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
     xAxisLabelMargin: base.lineDistance / 4,
     meetingStyle: matchString(base.meetingStyle, {
         'metro': (): MeetingStyle => ({ kind: 'metro', relWidth: 2 / 3, relStrapSize: 2 / 5 }),
-        'bar': (): MeetingStyle => ({ kind: 'bar', relWidth: 1 / 5, relExcess: 1 / 5 }),
+        'bar': (): MeetingStyle => ({ kind: 'bar', relWidth: 1 / 5, relExcess: 1 / 3 }),
     }),
     xAxisPos: base.xAxisPosition,
     enumerateMeetings: base.enumerationStyle,

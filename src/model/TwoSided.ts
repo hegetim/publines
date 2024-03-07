@@ -1,5 +1,4 @@
 import _ from "lodash";
-import { tail } from "./Util";
 import { BlockCrossings, SbcmRealization, Storyline } from "./Storyline";
 import { oneSidedScm } from "./OneSided";
 
@@ -108,7 +107,7 @@ const moveBlockCrossings = (bcs: BlockCrossings, by: number): BlockCrossings =>
     bcs.map(([a, b, c]) => [a + by, b + by, c + by]);
 
 export const twoSidedScm = (story: Storyline): SbcmRealization => {
-    const [topSet, bottomSet] = tail(maxCutGreedyEC(mkCrossingMatrix(story), story.authorIds.length))
+    const [_, topSet, bottomSet] = maxCutGreedyEC(mkCrossingMatrix(story), story.authorIds.length)
     // console.log({ note: 'the greedy cut', topSet, bottomSet })
     const [topStory, topSize, bottomStory, bottomSize] = splitStory(story, topSet, bottomSet);
     const [topReal, bottomReal] = [oneSidedScm(topStory), oneSidedScm(bottomStory)];
