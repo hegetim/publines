@@ -29,16 +29,16 @@ export interface AlgoConfig {
     kind: TupleToUnion<typeof sbcmAlgos>
 }
 
-export const sbcmAlgos = ['1scm', '2scm'] as const;
+export const sbcmAlgos = ['1scm', '2scm', 'sbcm'] as const;
 
 const baseThickness = 3;
 
 export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
     lineDist: base.lineDistance,
     stretch: matchString(base.stretch, {
-        'condensed': (): Stretch => ({ kind: 'bezier', incline: 2 / 3, relWidth: Math.pow(2, -1 / 3) }),
-        'normal': (): Stretch => ({ kind: 'arc', relWidth: Math.pow(2, 1 / 3) }),
-        'expanded': (): Stretch => ({ kind: 'arc', relWidth: 2 }),
+        'condensed': (): Stretch => ({ kind: 'bezier', incline: 2 / 3, relWidth: Math.pow(2, -1 / 4) }),
+        'normal': (): Stretch => ({ kind: 'arc', relWidth: Math.pow(2, 1 / 4) }),
+        'expanded': (): Stretch => ({ kind: 'arc', relWidth: Math.pow(2, 3 / 4) }),
     }),
     initialMargin: base.lineDistance / 2,
     finalMargin: base.lineDistance / 2,

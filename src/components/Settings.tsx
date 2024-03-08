@@ -42,7 +42,7 @@ export const Settings = (props: Props) => {
                 <div className="settings-setting-label">(block) crossing minimization:</div>
                 <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-algo')}
                     value={props.config.algo.kind} onChange={x => props.updateConfig(algoKind(x.target.value))}>
-                    {...mkOptions<AlgoConfig['kind']>({ '1scm': "one-sided SCM", '2scm': "two-sided SCM" })}
+                    {...mkOptions<AlgoConfig['kind']>({ '1scm': "one-sided SCM", '2scm': "two-sided SCM", 'sbcm': "greedy SBCM" })}
                 </select>
             </div>
             <div className="settings-inner-header">Visuals</div>
