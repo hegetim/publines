@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect } from "react"
 import _ from "lodash";
 import { DrawingConfig, DrawingResult, ProtoLabel, bbox2viewBox } from "../model/StorylineDrawings"
 import { matchByKind, matchString } from "../model/Util";
@@ -10,11 +10,17 @@ export const StorylineSvg = (props: {
     meetingMeta: { title: string, informal: boolean }[],
     authorNames: string[],
 }) => {
-    const pathCommons = { fill: "none", strokeWidth: props.config.authorLineStrokeWidth };
+    const pathCommons = { fill: "none" };
     const bbox = props.drawn.bbox;
 
+    useEffect(() => {
+        const rootStyle = document.documentElement.style;
+        rootStyle.setProperty('--author-line-stroke-width', props.config.authorLineStrokeWidth.toString());
+        rootStyle.setProperty('--selected-line-stroke-width', (1.5 * props.config.authorLineStrokeWidth).toString());
+    }, [props.config.authorLineStrokeWidth]);
+
     return <svg className="story-main-svg" {...bbox2viewBox(bbox)}>
-        <g>
+        <g className="author-lines-group">
             {..._.zip(props.drawn.paths, props.authorNames).map(([cmds, name], i) =>
                 <path key={i} {...pathCommons} stroke={selectColor(i)} d={cmds}><title>{name}</title></path>)}
         </g>

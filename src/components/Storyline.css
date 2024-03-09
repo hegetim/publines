@@ -6,6 +6,14 @@
     overflow-x: scroll;
 }
 
+.story-main-svg .author-lines-group path {
+    stroke-width: var(--author-line-stroke-width);
+}
+
+.story-main-svg .author-lines-group path:hover {
+    stroke-width: var(--selected-line-stroke-width);
+}
+
 @media (width > 500px) {
     .story-svg-container {
         margin-right: 1ex;

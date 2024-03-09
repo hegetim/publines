@@ -17,3 +17,8 @@ code {
     position: fixed;
     visibility: hidden;
 }
+
+:root {
+    --author-line-stroke-width: 1;
+    --selected-line-stroke-width: 1;
+}
