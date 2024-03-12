@@ -78,3 +78,7 @@ export const hash = (o: any): number => Array.from(JSON.stringify(o))
 
 export const intersperse = <T>(ts: T[], f: (before: T, i: number) => T) =>
     ts.reduce((acc, t, i) => i === ts.length - 1 ? [...acc, t] : [...acc, t, f(t, i)], [] as T[])
+
+export const expand = <T>(ts: T[], newLen: number, zero: () => T): void => {
+    ts.push(...Array.from({ length: newLen - ts.length }, zero));
+}
