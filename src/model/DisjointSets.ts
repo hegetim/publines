@@ -1,11 +1,11 @@
 import { expand } from "./Util";
 
 export interface DisjointSets {
-    get: (k: number) => number | undefined,
-    mkSet: (k: number) => void,
-    union: (a: number, b: number) => number,
-    sameSet: (a: number, b: number) => boolean,
-    contains: (k: number) => boolean,
+    readonly get: (k: number) => number | undefined,
+    readonly mkSet: (k: number) => void,
+    readonly union: (a: number, b: number) => number,
+    readonly sameSet: (a: number, b: number) => boolean,
+    readonly contains: (k: number) => boolean,
 }
 
 interface Entry {

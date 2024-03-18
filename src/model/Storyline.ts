@@ -30,12 +30,12 @@ export const mkStoryline = (
     const allAuthors = new Map([...authors].map(([id, [author, _1]]) => [id, author]));
     allAuthors.set(protagonist.id, protagonist);
     return [{ authorIds: orderedAuthors, meetings }, allAuthors];
-}
+};
 
 const mostFrequentKeys = <K, T>(map: Map<K, [T, number]>, limit: number) => {
     if (limit < 0) { return [...map.keys()]; }
     else { return _.sortBy([...map], ([_0, [_1, n]]) => -n).slice(0, limit).map(t => t[0]); }
-}
+};
 
 export type BlockCrossings = [number, number, number][];
 
@@ -55,7 +55,7 @@ export const supportsMeeting = (perm: number[], meeting: number[]) => {
     } else {
         return false;
     }
-}
+};
 
 export interface Metrics {
     crossings: number,
@@ -76,4 +76,7 @@ export const calcMetrics = (real: SbcmRealization) =>
         crossings: (b - a + 1) * (c - b),
         blockCrossings: 1,
         passages: c - a + 1,
-    })).reduce(sumM, zeroM)
+    })).reduce(sumM, zeroM);
+
+export const mkPwCrossings = (real: SbcmRealization) =>
+    real.blockCrossings.map(tmp => tmp.flatMap(([a, b, c]) => _.range(b, a, -1).flatMap(_0 => _.range(b, c))));
