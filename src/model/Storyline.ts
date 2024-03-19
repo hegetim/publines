@@ -78,5 +78,7 @@ export const calcMetrics = (real: SbcmRealization) =>
         passages: c - a + 1,
     })).reduce(sumM, zeroM);
 
-export const mkPwCrossings = (real: SbcmRealization) =>
-    real.blockCrossings.map(tmp => tmp.flatMap(([a, b, c]) => _.range(b, a, -1).flatMap(_0 => _.range(b, c))));
+export const mkPwCrossings = (real: SbcmRealization): number[][] =>
+    real.blockCrossings.map(tmp => tmp.flatMap(([a, b, c]) =>
+        _.range(b, a - 1, -1).flatMap(y => _.range(y, y - b + c))
+    ));

@@ -1,6 +1,8 @@
 import _ from "lodash";
-import { SbcmRealization, Storyline, mkPwCrossings, supportsMeeting } from "./Storyline";
+import { SbcmRealization, Storyline, mkPwCrossings, mkStoryline, supportsMeeting } from "./Storyline";
 import { windows2 } from "./Util";
+import { fakePublications } from "../components/Playground";
+import { oneSidedScm } from "./OneSided";
 
 interface GridNode<T extends GridNode<T>> {
     top: T | undefined,
@@ -10,9 +12,9 @@ interface GridNode<T extends GridNode<T>> {
 }
 
 interface Cell extends GridNode<Cell> {
-    lineIdx: number,
-    trCorner: Corner,  // this corner is unique for every cell; bl would also work
-    meetings: number[],
+    readonly lineIdx: number,
+    readonly trCorner: Corner,  // this corner is unique for every cell; bl would also work
+    readonly meetings: number[],
 }
 
 type Corner = GridNode<Corner> & {
@@ -35,31 +37,34 @@ const applyX = (perm: number[], x: number) => {
 };
 
 const mkCells = (story: Storyline, realization: SbcmRealization) => {
+    const k = realization.initialPermutation.length;
     const cells: Cell[] = [];
-    const buffer: (Cell | undefined)[] = Array.from({ length: realization.initialPermutation.length }, () => undefined);
+    const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
+    const meetingBuf: number[][] = Array.from({ length: k }, () => []);
     let perm = realization.initialPermutation;
 
-    _.zip(mkPwCrossings(realization), story.meetings).forEach(([xs, meeting], i) => {
+    const pwCrossings = mkPwCrossings(realization);
+    console.log(pwCrossings)
+
+    _.zip(pwCrossings, story.meetings).forEach(([xs, meeting], i) => {
         if (xs) {
             xs.forEach(x => {
-                const [left, bottom] = [buffer[x], buffer[x + 1]];
                 const trCorner: Corner = { ...empty(), kind: 'incomplete' };
+
+                const left = cellBuf[x] && (cellBuf[x]!.lineIdx === (x - 1)) ? cellBuf[x] : undefined;
+                const bottom = cellBuf[x + 1] && (cellBuf[x + 1]!.lineIdx === (x + 1)) ? cellBuf[x + 1] : undefined;
 
                 const cell: Cell = { ...empty(), left, bottom, trCorner, lineIdx: x, meetings: [] };
                 cells.push(cell);
 
-                if (left) {
-                    left.right = cell;
-                    left.meetings.forEach(m => {
-                        if (m < 0) {
-                            cell.meetings.push(-m + 1);
-                        }
-                    });
-                }
+                if (left) { left.right = cell; }
                 if (bottom) { bottom.top = cell; }
 
-                buffer[x] = cell;
-                buffer[x + 1] = cell;
+                cellBuf[x] = cell;
+                cellBuf[x + 1] = cell;
+
+                cell.meetings.push(...meetingBuf[x]!);
+                meetingBuf[x] = [];
 
                 applyX(perm, x);
             });
@@ -67,11 +72,12 @@ const mkCells = (story: Storyline, realization: SbcmRealization) => {
         if (meeting) {
             const supported = supportsMeeting(perm, meeting);
             if (!supported) { throw new Error(`meeting ${meeting} is unsupported by ${perm}`); }
-            buffer[supported.to]!.meetings.push(-i - 1); // ugly encoding for "crossing happens _before_ meeting"
+            if (cellBuf[supported.to] && cellBuf[supported.to]!.lineIdx === supported.to) {
+                cellBuf[supported.to]!.meetings.push(i);
+            }
+            meetingBuf[supported.to]!.push(i);
         }
     });
-
-    cells.forEach(c => c.meetings.forEach((m, i, ms) => { if (m < 0) { ms[i] = -m + 1; } }));
 
     return cells;
 };
@@ -80,38 +86,8 @@ const mkCorners = (cells: Cell[]) => {
     const corners: Corner[] = [];
 
     cells.forEach(cell => {
-        /* CASES 4 tr:
-         *  + has top.right => edge to top.tr
-         *  + _otherwise_: has right?.top?.left => edge to right.top.left.tr
-         *  + has right.top => edge to right.tr
-         *  + _otherwise_: has top?.right?.bottom => edge to top.right.bottom.tr
-         *  + has top + right:
-         *      > top.right == right.top != nil => if no two meetings then internal else point hole
-         *      > top.right == right.top == nil => type 'any' boundary
-         *      > top.right != right.top == nil => type 'tl' boundary?
-         *      > right.top != top.right == nil => type 'br' boundary?
-         *      > check never nil != top.right != right.top != nil!
-         *  + has only top:
-         *      > has top.right => type 'any' boundary
-         *  + has only right:
-         *      > has right.top => type 'any' boundary
-         *  + all other cases:
-         *      > type 'none' boundary
-         * 
-         * CASES 4 tl (left == nil AND top?.left?.bottom == nil):
-         *  - has top => edge to tr
-         *  - has top.left:
-         *      > edge to top.left.tr
-         *      > type 'any' boundary
-         *  - _otherwise_: type 'none' boundary
-         * 
-         * CASES 4 br (bottom == nil AND right?.bottom == nil):
-         *  - has right:
-         *      > edge to tr
-         *      > type 'none' boundary
-         * 
-         * CASES 4 bl (never)
-         */
+        // top-right corner:
+        corners.push(cell.trCorner);
 
         // top edge
         if (cell.top?.right) {
@@ -146,7 +122,6 @@ const mkCorners = (cells: Cell[]) => {
                 }
             } else if (cell.top.right) {
                 cell.trCorner.kind = 'tl-boundary';
-
             } else if (cell.right.top) {
                 cell.trCorner.kind = 'br-boundary';
             } else {
@@ -156,6 +131,26 @@ const mkCorners = (cells: Cell[]) => {
             cell.trCorner.kind = 'any-boundary';
         } else {
             cell.trCorner.kind = 'none-boundary';
+        }
+
+        // top-left corner
+        if (cell.top && !cell.left && !cell.top.left?.bottom) {
+            const tl: Corner = { ...empty(), kind: cell.top.left ? 'any-boundary' : 'none-boundary' };
+            corners.push(tl);
+            tl.right = cell.trCorner;
+            cell.trCorner.left = tl;
+            if (cell.top.left) {
+                tl.top = cell.top.left.trCorner;
+                cell.top.left.trCorner.bottom = tl;
+            }
+        }
+
+        // top-right corner
+        if (cell.right && !cell.bottom && !cell.right.bottom) {
+            const br: Corner = { ...empty(), kind: 'none-boundary' };
+            corners.push(br);
+            br.top = cell.trCorner;
+            cell.trCorner.bottom = br;
         }
     });
 
@@ -169,3 +164,26 @@ const hasNoDuplicates = (xs: number[]) => {
     }
     return true;
 };
+
+export const ccTest = () => {
+    const publs = fakePublications({
+        "meetings": [
+            [0, 1, 2, 3, 4, 5],
+            [0, 1],
+            [0, 1, 2, 6],
+            [0, 1, 2, 6, 3, 4, 7, 8],
+            [0, 1, 6],
+            [0, 6, 3],
+            [0, 6, 3, 2, 7],
+            [0, 6, 3, 2, 7, 1, 9]
+        ]
+    });
+    const [story, _0] = mkStoryline(publs, publs[0]?.authors[0]!, false);
+    const realized = oneSidedScm(story);
+
+    const cells = mkCells(story, realized);
+
+    mkCorners(cells);
+
+    console.log(cells[0]);
+}
