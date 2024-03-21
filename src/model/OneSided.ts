@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Storyline, SbcmRealization, BlockCrossings, supportsMeeting, applyBc } from "./Storyline";
+import { Storyline, Realization, BlockCrossings, supportsMeeting, applyBc } from "./Storyline";
 import { windows2 } from "./Util";
 
 const compareAttendance = (story: Storyline) => (a: number, b: number) => {
@@ -29,7 +29,7 @@ const cross = (perm: number[], iPerm: number[], crossAt: number) => {
     iPerm[afterX] -= 1;
 }
 
-export const oneSidedScm = (story: Storyline): SbcmRealization => {
+export const oneSidedScm = (story: Storyline): Realization => {
     const initialPermutation = _.range(0, story.authorIds.length).sort(compareAttendance(story));
     // console.log({ initialPermutation });
     let perm = [...initialPermutation];

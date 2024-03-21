@@ -4,7 +4,7 @@ import "./Storyline.css"
 import { Author, Publication } from "../model/Metadata"
 import { DrawingConfig, DrawingResult, drawSections } from "../model/StorylineDrawings"
 import { mkSections } from "../model/Sections"
-import { SbcmRealization, Storyline } from "../model/Storyline"
+import { Realization, Storyline } from "../model/Storyline"
 import { oneSidedScm } from "../model/OneSided"
 import { twoSidedScm } from "../model/TwoSided"
 import { StorylineSvg } from "./StorylineSvg"
@@ -21,7 +21,7 @@ export const StorylineComponent = (props: {
     story: Storyline,
     authors: Map<string, Author>,
 }) => {
-    const realization: SbcmRealization = matchByKind(props.config.algo, {
+    const realization: Realization = matchByKind(props.config.algo, {
         '1scm': () => oneSidedScm(props.story),
         '2scm': () => twoSidedScm(props.story),
         'sbcm': () => greedySbcm(props.story, Math.max(6, props.story.authorIds.length / 2)),
@@ -46,7 +46,7 @@ export const StorylineComponent = (props: {
 
 /// separate so that we do not recalculate the whole storyline on each scroll...
 const InnerComponent = (props: {
-    realization: SbcmRealization,
+    realization: Realization,
     drawingConfig: DrawingConfig,
     authorNames: string[],
     drawn: DrawingResult,

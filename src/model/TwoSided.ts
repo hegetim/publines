@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { BlockCrossings, SbcmRealization, Storyline } from "./Storyline";
+import { BlockCrossings, Realization, Storyline } from "./Storyline";
 import { oneSidedScm } from "./OneSided";
 
 const lightestEdge = (m: number[][]): [number, number, number] => {
@@ -84,7 +84,7 @@ const splitStory = (story: Storyline, top: number[], bottom: number[]): [Storyli
     return [topStory, top.length + 1, bottomStory, bottom.length + 1];
 }
 
-const mergeRealizations = (top: SbcmRealization, bottom: SbcmRealization): SbcmRealization => {
+const mergeRealizations = (top: Realization, bottom: Realization): Realization => {
     const flippedTop = flipRealization(top);
     const topSize = top.initialPermutation.length;
     // console.log({ note: 'merging sbcm realizations', flippedTop, bottom })
@@ -95,7 +95,7 @@ const mergeRealizations = (top: SbcmRealization, bottom: SbcmRealization): SbcmR
     };
 }
 
-const flipRealization = (real: SbcmRealization): SbcmRealization => {
+const flipRealization = (real: Realization): Realization => {
     const n = real.initialPermutation.length;
     return {
         initialPermutation: real.initialPermutation.toReversed(),
@@ -106,7 +106,7 @@ const flipRealization = (real: SbcmRealization): SbcmRealization => {
 const moveBlockCrossings = (bcs: BlockCrossings, by: number): BlockCrossings =>
     bcs.map(([a, b, c]) => [a + by, b + by, c + by]);
 
-export const twoSidedScm = (story: Storyline): SbcmRealization => {
+export const twoSidedScm = (story: Storyline): Realization => {
     const [_, topSet, bottomSet] = maxCutGreedyEC(mkCrossingMatrix(story), story.authorIds.length)
     // console.log({ note: 'the greedy cut', topSet, bottomSet })
     const [topStory, topSize, bottomStory, bottomSize] = splitStory(story, topSet, bottomSet);

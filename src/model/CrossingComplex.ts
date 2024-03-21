@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { SbcmRealization, Storyline, mkPwCrossings, mkStoryline, supportsMeeting } from "./Storyline";
+import { Realization, Storyline, mkPwCrossings, supportsMeeting } from "./Storyline";
 import { windows2 } from "./Util";
 import { fakePublications } from "../components/Playground";
 import { oneSidedScm } from "./OneSided";
@@ -36,7 +36,7 @@ const applyX = (perm: number[], x: number) => {
     perm[x + 1] = tmp;
 };
 
-const mkCells = (story: Storyline, realization: SbcmRealization) => {
+const mkCells = (story: Storyline, realization: Realization) => {
     const k = realization.initialPermutation.length;
     const cells: Cell[] = [];
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
@@ -145,7 +145,7 @@ const mkCorners = (cells: Cell[]) => {
             }
         }
 
-        // top-right corner
+        // bottom-right corner
         if (cell.right && !cell.bottom && !cell.right.bottom) {
             const br: Corner = { ...empty(), kind: 'none-boundary' };
             corners.push(br);
@@ -165,21 +165,21 @@ const hasNoDuplicates = (xs: number[]) => {
     return true;
 };
 
-export const ccTest = () => {
-    const publs = fakePublications({
-        "meetings": [
-            [0, 1, 2, 3, 4, 5],
-            [0, 1],
-            [0, 1, 2, 6],
-            [0, 1, 2, 6, 3, 4, 7, 8],
-            [0, 1, 6],
-            [0, 6, 3],
-            [0, 6, 3, 2, 7],
-            [0, 6, 3, 2, 7, 1, 9]
-        ]
-    });
-    const [story, _0] = mkStoryline(publs, publs[0]?.authors[0]!, false);
-    const realized = oneSidedScm(story);
+export const ccTest = (story: Storyline, realized: Realization) => {
+    // const publs = fakePublications({
+    //     "meetings": [
+    //         [0, 1, 2, 3, 4, 5],
+    //         [0, 1],
+    //         [0, 1, 2, 6],
+    //         [0, 1, 2, 6, 3, 4, 7, 8],
+    //         [0, 1, 6],
+    //         [0, 6, 3],
+    //         [0, 6, 3, 2, 7],
+    //         [0, 6, 3, 2, 7, 1, 9]
+    //     ]
+    // });
+    // const [story, _0] = mkStoryline(publs, publs[0]?.authors[0]!, false);
+    // const realized = oneSidedScm(story);
 
     const cells = mkCells(story, realized);
 

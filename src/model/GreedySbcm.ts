@@ -6,7 +6,7 @@
  * see commit c89ba797da13acd93a0262cd061ba257367d91ec                           *
  *********************************************************************************/
 
-import { BlockCrossings, SbcmRealization, Storyline } from "./Storyline";
+import { BlockCrossings, Realization, Storyline } from "./Storyline";
 
 type Group = { author: number, position: number }[];
 
@@ -268,7 +268,7 @@ function adaptPermutation(pair: PairInfo, p: number[], G: Group[], _A: number[][
     return [newP, bc];
 }
 
-export const greedySbcm = (storyline: Storyline, lookahead: number): SbcmRealization => {
+export const greedySbcm = (storyline: Storyline, lookahead: number): Realization => {
     const meetings = storyline.meetings;
     const blockCrossings: BlockCrossings[] = [[]]; // first meeting always fits
     const allAuthors = Array.from({ length: Math.max(...meetings.flat()) + 1 }, (_, i) => i);

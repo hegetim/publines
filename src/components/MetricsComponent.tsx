@@ -3,9 +3,9 @@ import "./Metrics.css";
 import { cls } from "../model/Util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { SbcmRealization, calcMetrics } from "../model/Storyline";
+import { Realization, calcMetrics } from "../model/Storyline";
 
-export const MetricsComponent = (props: { data: SbcmRealization }) => {
+export const MetricsComponent = (props: { data: Realization }) => {
     const [isCollapsed, setCollapsed] = useState(true);
     const metrics = calcMetrics(props.data);
 

@@ -39,7 +39,7 @@ const mostFrequentKeys = <K, T>(map: Map<K, [T, number]>, limit: number) => {
 
 export type BlockCrossings = [number, number, number][];
 
-export interface SbcmRealization {
+export interface Realization {
     initialPermutation: number[],
     blockCrossings: BlockCrossings[],
 }
@@ -71,14 +71,14 @@ const sumM = (a: Metrics, b: Metrics): Metrics => ({
 
 const zeroM: Metrics = { crossings: 0, blockCrossings: 0, passages: 0 };
 
-export const calcMetrics = (real: SbcmRealization) =>
+export const calcMetrics = (real: Realization) =>
     real.blockCrossings.flat().map(([a, b, c]) => as<Metrics>({
         crossings: (b - a + 1) * (c - b),
         blockCrossings: 1,
         passages: c - a + 1,
     })).reduce(sumM, zeroM);
 
-export const mkPwCrossings = (real: SbcmRealization): number[][] =>
+export const mkPwCrossings = (real: Realization): number[][] =>
     real.blockCrossings.map(tmp => tmp.flatMap(([a, b, c]) =>
         _.range(b, a - 1, -1).flatMap(y => _.range(y, y - b + c))
     ));
