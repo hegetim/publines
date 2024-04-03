@@ -1,10 +1,9 @@
 import _ from "lodash";
 import { Realization, Storyline, mkPwCrossings, supportsMeeting } from "./Storyline";
-import { windows2 } from "./Util";
-import { fakePublications } from "../components/Playground";
-import { oneSidedScm } from "./OneSided";
+import { assertExhaustive, matchString, windows2 } from "./Util";
 
 interface GridNode<T extends GridNode<T>> {
+    id: number,
     top: T | undefined,
     right: T | undefined,
     bottom: T | undefined,
@@ -25,10 +24,17 @@ type Corner = GridNode<Corner> & {
     | 'any-boundary'            // concave boundary (>180°, 3 adjacent faces)
     | 'tl-boundary'             // concave boundary (>270°, 5 adjacent faces, top-left orientation)
     | 'br-boundary',            // concave boundary (>270°, 5 adjacent faces, bottom-right orientation)
+    cellId: number,
 };
 
-const empty = <T extends GridNode<T>>(): GridNode<T> =>
-    ({ top: undefined, right: undefined, bottom: undefined, left: undefined });
+interface Chord {
+    orientation: 'vertical' | 'horizontal',
+    start: Corner,
+    end: Corner,
+}
+
+const empty = <T extends GridNode<T>>(id: number): GridNode<T> =>
+    ({ id, top: undefined, right: undefined, bottom: undefined, left: undefined });
 
 const applyX = (perm: number[], x: number) => {
     const tmp = perm[x]!;
@@ -38,23 +44,20 @@ const applyX = (perm: number[], x: number) => {
 
 const mkCells = (story: Storyline, realization: Realization) => {
     const k = realization.initialPermutation.length;
-    const cells: Cell[] = [];
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
     const meetingBuf: number[][] = Array.from({ length: k }, () => []);
     let perm = realization.initialPermutation;
 
-    const pwCrossings = mkPwCrossings(realization);
-    console.log(pwCrossings)
+    const cells: Cell[] = [];
 
-    _.zip(pwCrossings, story.meetings).forEach(([xs, meeting], i) => {
+    _.zip(mkPwCrossings(realization), story.meetings).forEach(([xs, meeting], i) => {
         if (xs) {
             xs.forEach(x => {
-                const trCorner: Corner = { ...empty(), kind: 'incomplete' };
-
                 const left = cellBuf[x] && (cellBuf[x]!.lineIdx === (x - 1)) ? cellBuf[x] : undefined;
                 const bottom = cellBuf[x + 1] && (cellBuf[x + 1]!.lineIdx === (x + 1)) ? cellBuf[x + 1] : undefined;
 
-                const cell: Cell = { ...empty(), left, bottom, trCorner, lineIdx: x, meetings: [] };
+                const trCorner: Corner = { ...empty(cells.length), kind: 'incomplete', cellId: cells.length };
+                const cell: Cell = { ...empty(cells.length), left, bottom, trCorner, lineIdx: x, meetings: [] };
                 cells.push(cell);
 
                 if (left) { left.right = cell; }
@@ -83,11 +86,10 @@ const mkCells = (story: Storyline, realization: Realization) => {
 };
 
 const mkCorners = (cells: Cell[]) => {
-    const corners: Corner[] = [];
+    const corners: Corner[] = cells.map(c => c.trCorner);
 
     cells.forEach(cell => {
-        // top-right corner:
-        corners.push(cell.trCorner);
+        // ==== top-right corner ====
 
         // top edge
         if (cell.top?.right) {
@@ -133,9 +135,10 @@ const mkCorners = (cells: Cell[]) => {
             cell.trCorner.kind = 'none-boundary';
         }
 
-        // top-left corner
+        // ==== top-left corner ====
         if (cell.top && !cell.left && !cell.top.left?.bottom) {
-            const tl: Corner = { ...empty(), kind: cell.top.left ? 'any-boundary' : 'none-boundary' };
+            const kind = cell.top.left ? 'any-boundary' : 'none-boundary';
+            const tl: Corner = { ...empty(corners.length), kind, cellId: cell.id };
             corners.push(tl);
             tl.right = cell.trCorner;
             cell.trCorner.left = tl;
@@ -145,15 +148,16 @@ const mkCorners = (cells: Cell[]) => {
             }
         }
 
-        // bottom-right corner
+        // ==== bottom-right corner ====
         if (cell.right && !cell.bottom && !cell.right.bottom) {
-            const br: Corner = { ...empty(), kind: 'none-boundary' };
+            const br: Corner = { ...empty(corners.length), kind: 'none-boundary', cellId: cell.id };
             corners.push(br);
             br.top = cell.trCorner;
             cell.trCorner.bottom = br;
         }
     });
 
+    /*DEBUG*/if (!hasNoDuplicates(corners.map(c => c.id))) { console.error("duplicate corner id") }
     return corners;
 };
 
@@ -164,6 +168,47 @@ const hasNoDuplicates = (xs: number[]) => {
     }
     return true;
 };
+
+const mkEffectiveChords = (corners: Corner[]) => {
+    const hChords = corners.flatMap(c => mkEffectiveChord(c, 'horizontal'));
+    const vChords = corners.flatMap(c => mkEffectiveChord(c, 'vertical'));
+
+    // todo:
+    // conflict graph
+    // MIS
+    // cuts
+    // (rects)
+}
+
+const isConvex = (corner: Corner) => {
+    if (corner.kind === 'incomplete') { throw new Error(`incomplete corner ${corner} in effective chord`) }
+    return corner.kind === 'internal' || corner.kind === 'none-boundary';
+}
+
+const chordEnd = (corner: Corner, orientation: 'horizontal' | 'vertical'): Corner => {
+    const next = matchString(orientation, { 'horizontal': () => corner.right, 'vertical': () => corner.top });
+    if (next) {
+        if (isConvex(next)) {
+            return chordEnd(next, orientation);
+        } else {
+            return next
+        }
+    }
+    return corner;
+}
+
+const mkEffectiveChord = (start: Corner, orientation: 'horizontal' | 'vertical'): [] | [Chord] => {
+    if (isConvex(start)) {
+        return [];
+    } else {
+        let end = chordEnd(start, orientation);
+        if (start.id === end.id) {
+            return [];
+        } else {
+            return [{ orientation, start, end }];
+        }
+    }
+}
 
 export const ccTest = (story: Storyline, realized: Realization) => {
     // const publs = fakePublications({
