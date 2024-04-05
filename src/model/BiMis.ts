@@ -69,6 +69,13 @@ const assertIndependent = (g: (v: number) => number[], a: number, isa: BitSet, i
     });
 }
 
+export const bipartiteMis = (g: (v: number) => number[], a: number, b: number) => {
+    const m = maxMatching(g, a, b);
+    const res = mkMis(g, m, a);
+    /* DEBUG */ assertIndependent(g, a, ...res);
+    return res;
+}
+
 export const testMIS = () => {
     // const test = [[1, 2], [], [0, 3], [2], [2, 3], [4]];
     const test = [[0, 1, 3], [0, 1, 3, 4], [2], [2], [1, 2, 3, 4]];

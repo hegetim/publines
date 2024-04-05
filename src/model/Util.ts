@@ -27,6 +27,13 @@ export function* windows2<T>(array: T[]) {
     }
 }
 
+export function* unfold<T>(x: T | undefined, f: (t: T) => T | undefined) {
+    while (x) {
+        yield x;
+        x = f(x);
+    }
+}
+
 export type ClassNames = (string | { [index: string]: boolean })[];
 export const cls = (...names: ClassNames) => {
     const joined = names.flatMap(name =>
