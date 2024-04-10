@@ -1,26 +1,29 @@
 import { expand } from "./Util";
 
-export interface DisjointSets {
-    readonly get: (k: number) => number | undefined,
-    readonly mkSet: (k: number) => void,
-    readonly union: (a: number, b: number) => number,
+export interface DisjointSets<T> {
+    readonly get: (key: number) => T | undefined,
+    readonly mkSet: (key: number, value: T) => void,
+    readonly union: (a: number, b: number) => T,
     readonly sameSet: (a: number, b: number) => boolean,
-    readonly contains: (k: number) => boolean,
+    readonly contains: (key: number) => boolean,
+    readonly values: () => T[],
+    readonly debug: () => void;
 }
 
-interface Entry {
+interface Entry<T> {
     pointer: number,
     rank: number,
+    data: T,
 }
 
-const nil = (): Entry => ({ pointer: -1, rank: -1 });
 
-export const DisjointSets = (): DisjointSets => {
-    const entries: Entry[] = [];
+export const DisjointSets = <T>(merger: (t1: T, t2: T) => T, zero: () => T): DisjointSets<T> => {
+    const entries: Entry<T>[] = [];
+    const nil = (): Entry<T> => ({ pointer: -1, rank: -1, data: zero() });
 
     const findSet = (i: number): number => {
         const e = entries[i]!;
-        if (e.pointer !== i) {
+        if (e.pointer >= 0 && e.pointer !== i) {
             e.pointer = findSet(e.pointer);
         }
         return e.pointer;
@@ -30,13 +33,14 @@ export const DisjointSets = (): DisjointSets => {
 
     const sameSet = (a: number, b: number) => contains(a) && contains(b) && (findSet(a) === findSet(b));
 
-    const get = (k: number) => contains(k) ? findSet(k) : undefined;
+    const get = (k: number) => entries[findSet(k)]?.data ?? undefined;
 
-    const mkSet = (k: number) => {
-        if (entries.length <= k) { expand(entries, k, nil); }
+    const mkSet = (k: number, t: T) => {
+        if (entries.length <= k) { expand(entries, k + 1, nil); }
         const entry = entries[k]!;
         entry.pointer = k;
         entry.rank = 0;
+        entry.data = t;
     }
 
     const link = (a: number, b: number) => {
@@ -45,15 +49,22 @@ export const DisjointSets = (): DisjointSets => {
             const [aa, bb] = [entries[a]!, entries[b]!];
             if (aa.rank > bb.rank) {
                 bb.pointer = a;
+                aa.data = merger(aa.data, bb.data);
+                // bb.data = zero();
                 return a;
             } else {
                 aa.pointer = b;
+                bb.data = merger(bb.data, aa.data);
+                // aa.data = zero();
+                if (aa.rank === bb.rank) { bb.rank += 1; }
                 return b;
             }
         }
     }
 
-    const union = (a: number, b: number) => link(findSet(a), findSet(b));
+    const union = (a: number, b: number) => entries[link(findSet(a), findSet(b))]?.data!;
 
-    return { get, mkSet, union, sameSet, contains };
+    const values = () => entries.filter((e, i) => e.pointer === i).map(e => e.data!)
+
+    return { get, mkSet, union, sameSet, contains, values, debug: () => console.log({ msg: "disjoint-sets", entries }) };
 }

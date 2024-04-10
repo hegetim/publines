@@ -13,6 +13,7 @@ import { MetricsComponent } from "./MetricsComponent"
 import { UserConfig, mkDrawingConfig } from "../model/UserConfig"
 import { matchByKind } from "../model/Util"
 import { greedySbcm } from "../model/GreedySbcm"
+import { ccTest, mkBundles } from "../model/CrossingComplex"
 
 export const StorylineComponent = (props: {
     config: UserConfig,
@@ -21,11 +22,13 @@ export const StorylineComponent = (props: {
     story: Storyline,
     authors: Map<string, Author>,
 }) => {
-    const realization: Realization = matchByKind(props.config.algo, {
+    const preBundles: Realization = matchByKind(props.config.algo, {
         '1scm': () => oneSidedScm(props.story),
         '2scm': () => twoSidedScm(props.story),
         'sbcm': () => greedySbcm(props.story, Math.max(6, props.story.authorIds.length / 2)),
     });
+    const realization = mkBundles(props.story, preBundles);
+    // const realization = preBundles;
     const authorNames = props.story.authorIds.map(id => props.authors.get(id)!.name);
     const drawingConfig = mkDrawingConfig(props.config.style)
 

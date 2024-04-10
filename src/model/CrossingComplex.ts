@@ -1,8 +1,10 @@
 import _ from "lodash";
-import { Realization, Storyline, mkPwCrossings, supportsMeeting } from "./Storyline";
+import { BlockCrossings, Realization, Storyline, applyBc, mkPwCrossings, supportsMeeting } from "./Storyline";
 import { assertExhaustive, matchString, unfold, windows2 } from "./Util";
 import { bipartiteMis } from "./BiMis";
 import { splitmix32 } from "./Prng";
+import { DisjointSets } from "./DisjointSets";
+import { topoSortDfs } from "./TopologicalSorting";
 
 const PRNG_SEED = 0x42c0ffee;
 
@@ -41,6 +43,12 @@ type EffectiveChord = SimpleChord & { end: Corner };
 
 type Direction = 'top' | 'right' | 'bottom' | 'left';
 
+interface Bundle {
+    id: number,
+    bc: [number, number, number],
+    placeBefore: number[],
+}
+
 const rndm = splitmix32(PRNG_SEED);
 
 const empty = <T extends GridNode<T>>(id: number): GridNode<T> =>
@@ -58,7 +66,7 @@ const mkCells = (story: Storyline, realization: Realization) => {
     const k = realization.initialPermutation.length;
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
     const meetingBuf: number[][] = Array.from({ length: k }, () => []);
-    let perm = realization.initialPermutation;
+    let perm = [...realization.initialPermutation];
 
     const cells: Cell[] = [];
 
@@ -256,11 +264,21 @@ const cut = (from: Corner, dir: Direction) => {
         matchString(dir, {
             top: () => {
                 if (from.cell.top?.right) { cutGrid(from.cell.top, from.cell.top.right, 'right'); }
-                else { cutGrid(from.cell.right?.top!, from.cell.right?.top?.left!, 'left'); }
+                else if (from.cell.right?.top?.left) {
+                    cutGrid(from.cell.right.top, from.cell.right.top.left, 'left');
+                } else {
+                    console.error({ msg: "missing cell connection", from, dir })
+                    throw new Error("missing cell connection")
+                }
             },
             right: () => {
                 if (from.cell.right?.top) { cutGrid(from.cell.right, from.cell.right.top, 'top'); }
-                else { cutGrid(from.cell.top?.right!, from.cell.top?.right?.bottom!, 'bottom'); }
+                else if (from.cell.top?.right?.bottom) {
+                    cutGrid(from.cell.top.right, from.cell.top.right.bottom, 'bottom');
+                } else {
+                    console.error({ msg: "missing cell connection", from, dir })
+                    throw new Error("missing cell connection")
+                }
             },
             bottom: () => cutGrid(from.cell, from.cell.right!, 'right'),
             left: () => cutGrid(from.cell, from.cell.top!, 'top'),
@@ -336,6 +354,86 @@ const select2 = (c: Corner): SimpleChord[] => {
     const [dir1, dir2] = options[Math.floor(rndm() * options.length)]!;
     return [{ start: c, dir: dir1 }, { start: c, dir: dir2 }];
 };
+
+const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[]): BlockCrossings => {
+    const bundles = DisjointSets(mergeBundles, () => nilBundle);
+
+    const addToBundle = (bundleId: number, cell: Cell) => {
+        if (!bundles.contains(cell.id)) { bundles.mkSet(cell.id, nilBundle); }
+        bundles.union(bundleId, cell.id);
+        return cell;
+    }
+
+    const place = (before: number, after: number) => {
+        console.log({ msg: "in place", "same-set": bundles.sameSet(before, after), "after-bundle": bundles.get(after), "before-bundle": bundles.get(before) })
+        if (!bundles.sameSet(before, after)) {
+            const bundle = bundles.get(before)!;
+            bundle.placeBefore = _.union(bundle.placeBefore, [bundles.get(after)!.id]);
+        }
+    }
+
+    cutIntoRects.filter(c => !c.left && !c.bottom).forEach(c => {
+        const bundle: Bundle = { ...nilBundle, id: c.id };
+        bundles.mkSet(c.id, bundle);
+        let [i, j] = [c, c];
+        while (i.top) { i = addToBundle(bundle.id, i.top); }
+        while (j.right) { j = addToBundle(bundle.id, j.right); }
+        bundles.get(c.id)!.bc = [i.lineIdx, c.lineIdx, j.lineIdx + 1];
+        while (i.right) { i = addToBundle(bundle.id, i.right); }
+        while (j.top) { j = addToBundle(bundle.id, j.top); }
+    });
+
+    cutIntoRects.forEach(c => {
+        const orig = originals[c.id]!;
+        if (!c.left && orig.left) { place(orig.left.id, c.id); }
+        if (!c.bottom && orig.bottom) { place(orig.bottom.id, c.id); }
+    });
+
+    const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
+    const ordered = topoSortDfs(ids, v => bundles.get(v)?.placeBefore ?? []);
+
+    bundles.debug();
+
+    return ordered.map(id => bundles.get(id)!.bc);
+}
+
+const nilBundle: Bundle = { id: -1, bc: [-1, -1, -1], placeBefore: [] };
+
+const mergeBundles = (a: Bundle, b: Bundle): Bundle =>
+    ({ ...(a.id === -1 ? b : a), placeBefore: _.union(a.placeBefore, b.placeBefore) });
+
+const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[]): Realization => {
+    console.log(`initial permutation is ${init}`)
+    let perm = init;
+    bcs.reverse();
+    const seqs = story.meetings.map(meeting => {
+        const res: BlockCrossings = [];
+        while (!supportsMeeting(perm, meeting)) {
+            const bc = bcs.pop();
+            console.log(`meeting ${meeting} does not fit ${perm} so we try bc ${bc}`)
+            if (bc) {
+                perm = applyBc(perm, ...bc);
+                res.push(bc);
+            } else {
+                throw new Error(`no more block crossings but meeting ${meeting} is unsupported`);
+            }
+        }
+        return res;
+    });
+    return { initialPermutation: init, blockCrossings: seqs };
+}
+
+// fixme: make cuts operate on a shadow grid!
+export const mkBundles = (story: Storyline, realized: Realization): Realization => {
+    const cells = mkCells(story, realized);
+    const corners = mkCorners(cells);
+    const snapshot = structuredClone(cells);
+    mkEffectiveChords(corners).forEach(chord => cut(chord.start, chord.dir));
+    mkSimpleChords(corners).forEach(chord => cut(chord.start, chord.dir));
+    const bcs = mkBlockCrossings(snapshot, cells);
+    console.log({ msg: "after bundling", bcs: structuredClone(bcs), story, cells })
+    return mkRealization(story, bcs, realized.initialPermutation);
+}
 
 export const ccTest = (story: Storyline, realized: Realization) => {
     // const publs = fakePublications({
