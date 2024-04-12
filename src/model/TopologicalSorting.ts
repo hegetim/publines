@@ -7,7 +7,7 @@ export class CycleDetected extends Error {
     }
 }
 
-export const topoSortDfs = (ids: number[], neighbors: (v: number) => number[]) => {
+export const topologicalSortWithDfs = (ids: number[], neighbors: (v: number) => number[]) => {
     const [visited, finished] = [new BitSet(), new BitSet()];
     const result: number[] = [];
 

@@ -4,7 +4,7 @@ import { assertExhaustive, matchString, unfold, windows2 } from "./Util";
 import { bipartiteMis } from "./BiMis";
 import { splitmix32 } from "./Prng";
 import { DisjointSets } from "./DisjointSets";
-import { topoSortDfs } from "./TopologicalSorting";
+import { topologicalSortWithDfs } from "./TopologicalSorting";
 
 const PRNG_SEED = 0x42c0ffee;
 
@@ -49,7 +49,7 @@ interface Bundle {
     placeBefore: number[],
 }
 
-const rndm = splitmix32(PRNG_SEED);
+let random = splitmix32(PRNG_SEED);
 
 const empty = <T extends GridNode<T>>(id: number): GridNode<T> =>
     ({ id, top: undefined, right: undefined, bottom: undefined, left: undefined });
@@ -255,30 +255,27 @@ const innerNodes = (c: EffectiveChord) => [...unfold(c.start, cur => {
     return next && next.id === c.end.id ? undefined : next;
 })].slice(1);
 
-const cut = (from: Corner, dir: Direction) => {
+const cut = (originals: Cell[], cells: Cell[], from: Corner, dir: Direction) => {
+    const cutCell = (from: Cell, to: Cell, dir: Direction) =>
+        cutGrid(cells[from.id]!, cells[to.id]!, dir);
+
     const to = from[dir];
     if (!to) { throw new Error(`impossible cut: »${from}« -> ${dir}`); }
     cutGrid(from, to, dir);
 
-    if (from.cell.trCorner.id === from.id) {
+    const cell_ = originals[from.cell.id]!;
+
+    if (cell_.trCorner.id === from.id) {
         matchString(dir, {
             top: () => {
-                if (from.cell.top?.right) { cutGrid(from.cell.top, from.cell.top.right, 'right'); }
-                else if (from.cell.right?.top?.left) {
-                    cutGrid(from.cell.right.top, from.cell.right.top.left, 'left');
-                } else {
-                    console.error({ msg: "missing cell connection", from, dir })
-                    throw new Error("missing cell connection")
-                }
+                if (cell_.top?.right) { cutCell(cell_.top, cell_.top.right, 'right'); }
+                else if (cell_.right?.top?.left) { cutCell(cell_.right.top, cell_.right.top.left, 'left'); }
+                else { throw new Error(`missing cell connection ${from} -> ${dir}`); }
             },
             right: () => {
-                if (from.cell.right?.top) { cutGrid(from.cell.right, from.cell.right.top, 'top'); }
-                else if (from.cell.top?.right?.bottom) {
-                    cutGrid(from.cell.top.right, from.cell.top.right.bottom, 'bottom');
-                } else {
-                    console.error({ msg: "missing cell connection", from, dir })
-                    throw new Error("missing cell connection")
-                }
+                if (cell_.right?.top) { cutCell(cell_.right, cell_.right.top, 'top'); }
+                else if (cell_.top?.right?.bottom) { cutCell(cell_.top.right, cell_.top.right.bottom, 'bottom'); }
+                else { throw new Error(`missing cell connection ${from} -> ${dir}`); }
             },
             bottom: () => cutGrid(from.cell, from.cell.right!, 'right'),
             left: () => cutGrid(from.cell, from.cell.top!, 'top'),
@@ -292,7 +289,7 @@ const cut = (from: Corner, dir: Direction) => {
 
     if (to.kind === 'internal') {
         to.kind = 'cut';
-        cut(to, dir);
+        cut(originals, cells, to, dir);
     }
 }
 
@@ -343,7 +340,7 @@ const select1 = (c: Corner): SimpleChord => {
             else if (!c.right) { options.push('bottom'); }
         }
     }
-    const dir = options[Math.floor(rndm() * options.length)]!;
+    const dir = options[Math.floor(random() * options.length)]!;
     return { start: c, dir };
 };
 
@@ -351,7 +348,7 @@ const select2 = (c: Corner): SimpleChord[] => {
     const options: [Direction, Direction][] = [['bottom', 'top'], ['left', 'right']];
     if (c.kind === 'tl-boundary') { options.push(['top', 'left']); }
     if (c.kind === 'br-boundary') { options.push(['bottom', 'right']); }
-    const [dir1, dir2] = options[Math.floor(rndm() * options.length)]!;
+    const [dir1, dir2] = options[Math.floor(random() * options.length)]!;
     return [{ start: c, dir: dir1 }, { start: c, dir: dir2 }];
 };
 
@@ -365,7 +362,6 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[]): BlockCrossin
     }
 
     const place = (before: number, after: number) => {
-        console.log({ msg: "in place", "same-set": bundles.sameSet(before, after), "after-bundle": bundles.get(after), "before-bundle": bundles.get(before) })
         if (!bundles.sameSet(before, after)) {
             const bundle = bundles.get(before)!;
             bundle.placeBefore = _.union(bundle.placeBefore, [bundles.get(after)!.id]);
@@ -389,8 +385,10 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[]): BlockCrossin
         if (!c.bottom && orig.bottom) { place(orig.bottom.id, c.id); }
     });
 
+    // This is a bit tricky:
+    // We need "stable" topological sorting (i.e. connected components must remain in input order).
     const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
-    const ordered = topoSortDfs(ids, v => bundles.get(v)?.placeBefore ?? []);
+    const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
 
     bundles.debug();
 
@@ -406,54 +404,31 @@ const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[]): R
     console.log(`initial permutation is ${init}`)
     let perm = init;
     bcs.reverse();
-    const seqs = story.meetings.map(meeting => {
+    const sequences = story.meetings.map((meeting, i) => {
         const res: BlockCrossings = [];
         while (!supportsMeeting(perm, meeting)) {
             const bc = bcs.pop();
-            console.log(`meeting ${meeting} does not fit ${perm} so we try bc ${bc}`)
-            if (bc) {
+            console.log(`meeting ${meeting} (#${i}) does not fit ${perm} so we try bc ${bc}`)
+            if (bc !== undefined) {
                 perm = applyBc(perm, ...bc);
                 res.push(bc);
             } else {
-                throw new Error(`no more block crossings but meeting ${meeting} is unsupported`);
+                throw new Error(`no more block crossings but meeting ${meeting} is unsupported by ${perm}`);
             }
         }
         return res;
     });
-    return { initialPermutation: init, blockCrossings: seqs };
+    return { initialPermutation: init, blockCrossings: sequences };
 }
 
-// fixme: make cuts operate on a shadow grid!
 export const mkBundles = (story: Storyline, realized: Realization): Realization => {
+    random = splitmix32(PRNG_SEED);
     const cells = mkCells(story, realized);
     const corners = mkCorners(cells);
     const snapshot = structuredClone(cells);
-    mkEffectiveChords(corners).forEach(chord => cut(chord.start, chord.dir));
-    mkSimpleChords(corners).forEach(chord => cut(chord.start, chord.dir));
+    mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
+    mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     const bcs = mkBlockCrossings(snapshot, cells);
     console.log({ msg: "after bundling", bcs: structuredClone(bcs), story, cells })
-    return mkRealization(story, bcs, realized.initialPermutation);
-}
-
-export const ccTest = (story: Storyline, realized: Realization) => {
-    // const publs = fakePublications({
-    //     "meetings": [
-    //         [0, 1, 2, 3, 4, 5],
-    //         [0, 1],
-    //         [0, 1, 2, 6],
-    //         [0, 1, 2, 6, 3, 4, 7, 8],
-    //         [0, 1, 6],
-    //         [0, 6, 3],
-    //         [0, 6, 3, 2, 7],
-    //         [0, 6, 3, 2, 7, 1, 9]
-    //     ]
-    // });
-    // const [story, _0] = mkStoryline(publs, publs[0]?.authors[0]!, false);
-    // const realized = oneSidedScm(story);
-
-    const cells = mkCells(story, realized);
-
-    mkCorners(cells);
-
-    console.log(cells[0]);
+    return mkRealization(story, structuredClone(bcs), realized.initialPermutation);
 }

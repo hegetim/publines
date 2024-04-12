@@ -13,7 +13,7 @@ import { MetricsComponent } from "./MetricsComponent"
 import { UserConfig, mkDrawingConfig } from "../model/UserConfig"
 import { matchByKind } from "../model/Util"
 import { greedySbcm } from "../model/GreedySbcm"
-import { ccTest, mkBundles } from "../model/CrossingComplex"
+import { mkBundles } from "../model/CrossingComplex"
 
 export const StorylineComponent = (props: {
     config: UserConfig,
