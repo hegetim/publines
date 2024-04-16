@@ -65,7 +65,8 @@ const unsafeCellDummyForSwap = { ...empty(-1), lineIdx: -1, meetings: [], trCorn
 const mkCells = (story: Storyline, realization: Realization) => {
     const k = realization.initialPermutation.length;
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
-    const meetingBuf: number[][] = Array.from({ length: k }, () => []);
+    const meetingStarts: number[][] = Array.from({ length: k }, () => []);
+    const meetingEnds: number[][] = Array.from({ length: k }, () => []);
     let perm = [...realization.initialPermutation];
 
     const cells: Cell[] = [];
@@ -87,8 +88,10 @@ const mkCells = (story: Storyline, realization: Realization) => {
                 cellBuf[x] = cell;
                 cellBuf[x + 1] = cell;
 
-                cell.meetings.push(...meetingBuf[x]!);
-                meetingBuf[x] = [];
+                cell.meetings.push(...meetingEnds[x]!);
+                meetingEnds[x] = [];
+                cell.meetings.push(...meetingStarts[x + 1]!);
+                meetingStarts[x + 1] = [];
 
                 applyX(perm, x);
             });
@@ -96,10 +99,11 @@ const mkCells = (story: Storyline, realization: Realization) => {
         if (meeting) {
             const supported = supportsMeeting(perm, meeting);
             if (!supported) { throw new Error(`meeting ${meeting} is unsupported by ${perm}`); }
-            if (cellBuf[supported.to] && cellBuf[supported.to]!.lineIdx === supported.to) {
-                cellBuf[supported.to]!.meetings.push(i);
-            }
-            meetingBuf[supported.to]!.push(i);
+            const [atFrom, atTo] = [cellBuf[supported.from], cellBuf[supported.to]];
+            if (atFrom && atFrom.lineIdx === supported.from - 1) { atFrom.meetings.push(i); }
+            if (atTo && atTo.lineIdx === supported.to) { atTo.meetings.push(i); }
+            meetingStarts[supported.from]!.push(i);
+            meetingEnds[supported.to]!.push(i);
         }
     });
 
