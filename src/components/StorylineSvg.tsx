@@ -10,7 +10,6 @@ export const StorylineSvg = (props: {
     meetingMeta: { title: string, informal: boolean }[],
     authorNames: string[],
 }) => {
-    const pathCommons = { fill: "none" };
     const bbox = props.drawn.bbox;
 
     useEffect(() => {
@@ -22,7 +21,7 @@ export const StorylineSvg = (props: {
     return <svg className="story-main-svg" {...bbox2viewBox(bbox)}>
         <g className="author-lines-group">
             {..._.zip(props.drawn.paths, props.authorNames).map(([cmds, name], i) =>
-                <path key={i} {...pathCommons} stroke={selectColor(i)} d={cmds}><title>{name}</title></path>)}
+                <path key={i} {...authorCommons} {...mkAuthorStyle(i)} d={cmds}><title>{name}</title></path>)}
         </g>
         <g>
             {..._.zip(props.drawn.meetings, props.meetingMeta).map(([cmds, meta], i) =>
@@ -35,6 +34,13 @@ export const StorylineSvg = (props: {
         </g>
     </svg>
 }
+
+const authorCommons = { fill: "none" };
+
+const mkAuthorStyle = (i: number) => ({
+    stroke: selectColor(i),
+    'stroke-dasharray': i === 0 ? "6 3" : "none",
+});
 
 const mkMeetingStyle = (config: DrawingConfig, informal: boolean): React.SVGProps<SVGPathElement> =>
     matchByKind(config.meetingStyle, {
