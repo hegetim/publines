@@ -5,6 +5,7 @@ import { bipartiteMis } from "./BiMis";
 import { splitmix32 } from "./Prng";
 import { DisjointSets } from "./DisjointSets";
 import { topologicalSortWithDfs } from "./TopologicalSorting";
+import { bfs } from "./GraphTraverse";
 
 const PRNG_SEED = 0x42c0ffee;
 
@@ -21,6 +22,8 @@ interface Cell extends GridNode<Cell> {
     readonly rCorner: Corner,  // this corner is unique for every cell; l would also work
     readonly meetings: number[],
 }
+
+type Meeting = GridNode<Cell>;
 
 type Corner = GridNode<Corner> & {
     kind: 'incomplete'          // not yet determined
@@ -65,6 +68,7 @@ const unsafeCellDummyForSwap = { ...empty(-1), lineIdx: -1, meetings: [], trCorn
 const mkCells = (story: Storyline, realization: Realization) => {
     const k = realization.initialPermutation.length;
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
+    const meetings: (Meeting | undefined)[] = Array.from({ length: story.meetings.length }, () => undefined);
     const meetingStarts: number[][] = Array.from({ length: k }, () => []);
     const meetingEnds: number[][] = Array.from({ length: k }, () => []);
 
@@ -78,9 +82,9 @@ const mkCells = (story: Storyline, realization: Realization) => {
                 const left = cellBuf[x] && (cellBuf[x]!.lineIdx === (x - 1)) ? cellBuf[x] : undefined;
                 const bottom = cellBuf[x + 1] && (cellBuf[x + 1]!.lineIdx === (x + 1)) ? cellBuf[x + 1] : undefined;
 
-                const trCorner: Corner = { ...empty(cells.length), kind: 'incomplete', cell: unsafeCellDummyForSwap };
-                const cell: Cell = { ...empty(cells.length), tl: left, bl: bottom, rCorner: trCorner, lineIdx: x, meetings: [] };
-                trCorner.cell = cell;
+                const rCorner: Corner = { ...empty(cells.length), kind: 'incomplete', cell: unsafeCellDummyForSwap };
+                const cell: Cell = { ...empty(cells.length), tl: left, bl: bottom, rCorner, lineIdx: x, meetings: [] };
+                rCorner.cell = cell;
                 cells.push(cell);
 
                 if (left) { left.br = cell; }
@@ -90,8 +94,10 @@ const mkCells = (story: Storyline, realization: Realization) => {
                 cellBuf[x + 1] = cell;
 
                 cell.meetings.push(...meetingEnds[x]!);
+                meetingEnds[x]!.forEach(m => meetings[m]!.br = cell);
                 meetingEnds[x] = [];
                 cell.meetings.push(...meetingStarts[x + 1]!);
+                meetingStarts[x + 1]!.forEach(m => meetings[m]!.tr = cell);
                 meetingStarts[x + 1] = [];
 
                 applyX(perm, x);
@@ -100,16 +106,70 @@ const mkCells = (story: Storyline, realization: Realization) => {
         if (meeting) {
             const supported = supportsMeeting(perm, meeting);
             if (!supported) { throw new Error(`meeting ${meeting} is unsupported by ${perm}`); }
+            const inC: Meeting = empty(i);
             const [atFrom, atTo] = [cellBuf[supported.from], cellBuf[supported.to]];
-            if (atFrom && atFrom.lineIdx === supported.from - 1) { atFrom.meetings.push(i); }
-            if (atTo && atTo.lineIdx === supported.to) { atTo.meetings.push(i); }
+            if (atFrom && atFrom.lineIdx === supported.from - 1) {
+                atFrom.meetings.push(i);
+                inC.tl = atFrom;
+            }
+            if (atTo && atTo.lineIdx === supported.to) {
+                atTo.meetings.push(i);
+                inC.bl = atTo;
+            }
             meetingStarts[supported.from]!.push(i);
             meetingEnds[supported.to]!.push(i);
-        }
+            meetings[i] = inC;
+        } else { console.warn(`unnecessary crossings ${xs} after the last meeting`); }
     });
+
+    checkMeetingConflicts(cells, meetings.map(x => x!));
 
     return cells;
 };
+
+const checkMeetingConflicts = (cells: Cell[], meetings: Meeting[]) => {
+    const n = meetings.length;
+    const mm: (0 | 1 | 2)[][] = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
+    /// 0 => unknown safe
+    /// 1 => known safe
+    /// 2 => unsafe
+
+    const allBefore = (c: Cell): Cell[] =>
+        [...bfs(c.id, v => _.compact([cells[v]!.tl, cells[v]!.bl]).map(c => c.id))].map(i => cells[i]!);
+    const allAfter = (c: Cell): Cell[] =>
+        [...bfs(c.id, v => _.compact([cells[v]!.tr, cells[v]!.br]).map(c => c.id))].map(i => cells[i]!);
+
+    const allTR = (c: Cell): Cell[] => [...unfold(c, c => c.tr)];
+    const allBR = (c: Cell): Cell[] => [...unfold(c, c => c.br)];
+
+    const meetingsBefore = (c: Cell): Meeting[] =>
+        c.meetings.filter(i => meetings[i]!.tr === c || meetings[i]!.br === c).map(i => meetings[i]!);
+    const meetingsAfter = (c: Cell): Meeting[] =>
+        c.meetings.filter(i => meetings[i]!.tl === c || meetings[i]!.bl === c).map(i => meetings[i]!);
+
+    cells.forEach(cell => {
+        const bef = meetingsBefore(cell);
+        allAfter(cell).forEach(w => {
+            bef.forEach(m1 => meetingsAfter(w).filter(m => m.id > m1.id).forEach(m2 => mm[m1.id]![m2.id] = 1));
+        });
+    });
+
+    const doHop2 = (hop1: Cell, cs: Cell[], afterStart: Meeting[]) => cs.forEach(hop2 =>
+        allBefore(hop2).forEach(end => meetingsBefore(end).forEach(m2 =>
+            afterStart.filter(m => m.id < m2.id && mm[m.id]![m2.id] === 0).forEach(m1 => {
+                mm[m1.id]![m2.id] = 2;
+                console.warn(`conflicting meetings detected: ${m1.id} vs. ${m2.id}`)
+                console.warn(`critical path from ${hop1.id} to ${hop2.id}`)
+            }))));
+
+    cells.forEach(cell => {
+        const afterStart = meetingsAfter(cell);
+        allBefore(cell).forEach(hop1 => {
+            doHop2(hop1, allTR(hop1), afterStart);
+            doHop2(hop1, allBR(hop1), afterStart);
+        })
+    });
+}
 
 const mkCorners = (cells: Cell[]) => {
     const corners: Corner[] = cells.map(c => c.rCorner);
