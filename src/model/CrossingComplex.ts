@@ -10,15 +10,15 @@ const PRNG_SEED = 0x42c0ffee;
 
 interface GridNode<T extends GridNode<T>> {
     id: number,
-    top: T | undefined,
-    right: T | undefined,
-    bottom: T | undefined,
-    left: T | undefined,
+    tr: T | undefined,
+    br: T | undefined,
+    bl: T | undefined,
+    tl: T | undefined,
 }
 
 interface Cell extends GridNode<Cell> {
     readonly lineIdx: number,
-    readonly trCorner: Corner,  // this corner is unique for every cell; bl would also work
+    readonly rCorner: Corner,  // this corner is unique for every cell; l would also work
     readonly meetings: number[],
 }
 
@@ -28,8 +28,8 @@ type Corner = GridNode<Corner> & {
     | 'point-hole'              // point hole (4 adjacent faces w/ conflicting meetings)
     | 'none-boundary'           // convex boundary (90° or 180° corner, 1 or 2 adjacent faces)
     | 'any-boundary'            // concave boundary (>180°, 3 adjacent faces)
-    | 'tl-boundary'             // concave boundary (>270°, 5 adjacent faces, top-left orientation)
-    | 'br-boundary'             // concave boundary (>270°, 5 adjacent faces, bottom-right orientation)
+    | 'b-boundary'              // concave boundary (>270°, 5 adjacent faces, split bottom face)
+    | 't-boundary'              // concave boundary (>270°, 5 adjacent faces, split top face)
     | 'cut',                    // former internal corner that has been cut
     cell: Cell,
 };
@@ -41,7 +41,7 @@ interface SimpleChord {
 
 type EffectiveChord = SimpleChord & { end: Corner };
 
-type Direction = 'top' | 'right' | 'bottom' | 'left';
+type Direction = 'tr' | 'br' | 'bl' | 'tl';
 
 interface Bundle {
     id: number,
@@ -52,7 +52,7 @@ interface Bundle {
 let random = splitmix32(PRNG_SEED);
 
 const empty = <T extends GridNode<T>>(id: number): GridNode<T> =>
-    ({ id, top: undefined, right: undefined, bottom: undefined, left: undefined });
+    ({ id, tr: undefined, br: undefined, bl: undefined, tl: undefined });
 
 const applyX = (perm: number[], x: number) => {
     const tmp = perm[x]!;
@@ -67,6 +67,7 @@ const mkCells = (story: Storyline, realization: Realization) => {
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
     const meetingStarts: number[][] = Array.from({ length: k }, () => []);
     const meetingEnds: number[][] = Array.from({ length: k }, () => []);
+
     let perm = [...realization.initialPermutation];
 
     const cells: Cell[] = [];
@@ -78,12 +79,12 @@ const mkCells = (story: Storyline, realization: Realization) => {
                 const bottom = cellBuf[x + 1] && (cellBuf[x + 1]!.lineIdx === (x + 1)) ? cellBuf[x + 1] : undefined;
 
                 const trCorner: Corner = { ...empty(cells.length), kind: 'incomplete', cell: unsafeCellDummyForSwap };
-                const cell: Cell = { ...empty(cells.length), left, bottom, trCorner, lineIdx: x, meetings: [] };
+                const cell: Cell = { ...empty(cells.length), tl: left, bl: bottom, rCorner: trCorner, lineIdx: x, meetings: [] };
                 trCorner.cell = cell;
                 cells.push(cell);
 
-                if (left) { left.right = cell; }
-                if (bottom) { bottom.top = cell; }
+                if (left) { left.br = cell; }
+                if (bottom) { bottom.tr = cell; }
 
                 cellBuf[x] = cell;
                 cellBuf[x + 1] = cell;
@@ -111,74 +112,74 @@ const mkCells = (story: Storyline, realization: Realization) => {
 };
 
 const mkCorners = (cells: Cell[]) => {
-    const corners: Corner[] = cells.map(c => c.trCorner);
+    const corners: Corner[] = cells.map(c => c.rCorner);
 
     cells.forEach(cell => {
         // ==== top-right corner ====
 
         // top edge
-        if (cell.top?.right) {
-            /*DEBUG*/if (cell.trCorner.top || cell.top.trCorner.bottom) { console.warn('overwrite warning!'); }
-            cell.trCorner.top = cell.top.trCorner;
-            cell.top.trCorner.bottom = cell.trCorner;
-        } else if (cell.right?.top?.left) {
-            /*DEBUG*/if (cell.trCorner.top || cell.right.top.left.trCorner.bottom) { console.warn('overwrite warning!'); }
-            cell.trCorner.top = cell.right.top.left.trCorner;
-            cell.right.top.left.trCorner.bottom = cell.trCorner;
+        if (cell.tr?.br) {
+            /*DEBUG*/if (cell.rCorner.tr || cell.tr.rCorner.bl) { console.warn('overwrite warning!'); }
+            cell.rCorner.tr = cell.tr.rCorner;
+            cell.tr.rCorner.bl = cell.rCorner;
+        } else if (cell.br?.tr?.tl) {
+            /*DEBUG*/if (cell.rCorner.tr || cell.br.tr.tl.rCorner.bl) { console.warn('overwrite warning!'); }
+            cell.rCorner.tr = cell.br.tr.tl.rCorner;
+            cell.br.tr.tl.rCorner.bl = cell.rCorner;
         }
 
         // right edge
-        if (cell.right?.top) {
-            /*DEBUG*/if (cell.trCorner.right || cell.right.trCorner.left) { console.warn('overwrite warning!'); }
-            cell.trCorner.right = cell.right.trCorner;
-            cell.right.trCorner.left = cell.trCorner;
-        } else if (cell.top?.right?.bottom) {
-            /*DEBUG*/if (cell.trCorner.right || cell.top.right.bottom.trCorner.left) { console.warn('overwrite warning!'); }
-            cell.trCorner.right = cell.top.right.bottom.trCorner;
-            cell.top.right.bottom.trCorner.left = cell.trCorner;
+        if (cell.br?.tr) {
+            /*DEBUG*/if (cell.rCorner.br || cell.br.rCorner.tl) { console.warn('overwrite warning!'); }
+            cell.rCorner.br = cell.br.rCorner;
+            cell.br.rCorner.tl = cell.rCorner;
+        } else if (cell.tr?.br?.bl) {
+            /*DEBUG*/if (cell.rCorner.br || cell.tr.br.bl.rCorner.tl) { console.warn('overwrite warning!'); }
+            cell.rCorner.br = cell.tr.br.bl.rCorner;
+            cell.tr.br.bl.rCorner.tl = cell.rCorner;
         }
 
         // kind
-        if (cell.top && cell.right) {
-            if (cell.top.right && cell.right.top) {
-                if (cell.top.right !== cell.right.top) { throw new Error('degenerate face'); }
-                if (hasNoDuplicates([...cell.meetings, ...cell.top.right.meetings])) {
-                    cell.trCorner.kind = 'internal';
+        if (cell.tr && cell.br) {
+            if (cell.tr.br && cell.br.tr) {
+                if (cell.tr.br !== cell.br.tr) { throw new Error('degenerate face'); }
+                if (hasNoDuplicates([...cell.meetings, ...cell.tr.br.meetings])) {
+                    cell.rCorner.kind = 'internal';
                 } else {
-                    cell.trCorner.kind = 'point-hole';
+                    cell.rCorner.kind = 'point-hole';
                 }
-            } else if (cell.top.right) {
-                cell.trCorner.kind = 'tl-boundary';
-            } else if (cell.right.top) {
-                cell.trCorner.kind = 'br-boundary';
+            } else if (cell.tr.br) {
+                cell.rCorner.kind = 'b-boundary';
+            } else if (cell.br.tr) {
+                cell.rCorner.kind = 't-boundary';
             } else {
-                cell.trCorner.kind = 'any-boundary';
+                cell.rCorner.kind = 'any-boundary';
             }
-        } else if (cell.top?.right || cell.right?.top) {
-            cell.trCorner.kind = 'any-boundary';
+        } else if (cell.tr?.br || cell.br?.tr) {
+            cell.rCorner.kind = 'any-boundary';
         } else {
-            cell.trCorner.kind = 'none-boundary';
+            cell.rCorner.kind = 'none-boundary';
         }
 
         // ==== top-left corner ====
-        if (cell.top && !cell.left && !cell.top.left?.bottom) {
-            const kind = cell.top.left ? 'any-boundary' : 'none-boundary';
+        if (cell.tr && !cell.tl && !cell.tr.tl?.bl) {
+            const kind = cell.tr.tl ? 'any-boundary' : 'none-boundary';
             const tl: Corner = { ...empty(corners.length), kind, cell };
             corners.push(tl);
-            tl.right = cell.trCorner;
-            cell.trCorner.left = tl;
-            if (cell.top.left) {
-                tl.top = cell.top.left.trCorner;
-                cell.top.left.trCorner.bottom = tl;
+            tl.br = cell.rCorner;
+            cell.rCorner.tl = tl;
+            if (cell.tr.tl) {
+                tl.tr = cell.tr.tl.rCorner;
+                cell.tr.tl.rCorner.bl = tl;
             }
         }
 
         // ==== bottom-right corner ====
-        if (cell.right && !cell.bottom && !cell.right.bottom) {
+        if (cell.br && !cell.bl && !cell.br.bl) {
             const br: Corner = { ...empty(corners.length), kind: 'none-boundary', cell };
             corners.push(br);
-            br.top = cell.trCorner;
-            cell.trCorner.bottom = br;
+            br.tr = cell.rCorner;
+            cell.rCorner.bl = br;
         }
     });
 
@@ -195,13 +196,13 @@ const hasNoDuplicates = (xs: number[]) => {
 };
 
 const mkEffectiveChords = (corners: Corner[]) => {
-    const hChords = corners.flatMap(c => mkEffectiveChord(c, 'right'));
-    const vChords = corners.flatMap(c => mkEffectiveChord(c, 'top'));
+    const brChords = corners.flatMap(c => mkEffectiveChord(c, 'br'));
+    const trChords = corners.flatMap(c => mkEffectiveChord(c, 'tr'));
 
-    const conflicts = hChords.map(h => vChords.flatMap((v, i) => hasConflict(h, v) ? [i] : []));
-    const [hMask, vMask] = bipartiteMis(v => conflicts[v]!, hChords.length, vChords.length);
+    const conflicts = brChords.map(h => trChords.flatMap((v, i) => hasConflict(h, v) ? [i] : []));
+    const [hMask, vMask] = bipartiteMis(v => conflicts[v]!, brChords.length, trChords.length);
 
-    return [...hChords.filter((_, i) => hMask.get(i) === 1), ...vChords.filter((_, i) => vMask.get(i) === 1)];
+    return [...brChords.filter((_, i) => hMask.get(i) === 1), ...trChords.filter((_, i) => vMask.get(i) === 1)];
 }
 
 const mkEffectiveChord = (start: Corner, dir: Direction): [] | [EffectiveChord] => {
@@ -234,24 +235,24 @@ const chordEnd = (corner: Corner, dir: Direction): Corner => {
     return corner;
 }
 
-const hasConflict = (h: EffectiveChord, v: EffectiveChord) => {
-    const atEnds = (h.start.id === v.start.id && hasConflictingEnds(h.start, 'tr'))
-        || (h.start.id === v.end.id && hasConflictingEnds(h.start, 'br'))
-        || (h.end.id === v.start.id && hasConflictingEnds(h.end, 'tl'))
-        || (h.end.id === v.end.id && hasConflictingEnds(h.end, 'bl'))
-    const inBetween = !hasNoDuplicates([...innerNodes(h), ...innerNodes(v)].map(c => c.id));
+const hasConflict = (br: EffectiveChord, tr: EffectiveChord) => {
+    const atEnds = (br.start.id === tr.start.id && hasConflictingEnds(br.start, 'tr-br'))
+        || (br.start.id === tr.end.id && hasConflictingEnds(br.start, 'br-bl'))
+        || (br.end.id === tr.start.id && hasConflictingEnds(br.end, 'tl-tr'))
+        || (br.end.id === tr.end.id && hasConflictingEnds(br.end, 'bl-tl'))
+    const inBetween = !hasNoDuplicates([...innerNodes(br), ...innerNodes(tr)].map(c => c.id));
     return atEnds || inBetween;
 }
 
-const hasConflictingEnds = (c: Corner, pattern: 'tl' | 'tr' | 'bl' | 'br') => matchString(c.kind, {
+const hasConflictingEnds = (c: Corner, pattern: 'tl-tr' | 'tr-br' | 'br-bl' | 'bl-tl') => matchString(c.kind, {
     incomplete: () => { throw new Error(`incomplete corner ${c} in effective chord`) },
     internal: () => { throw new Error(`internal corner ${c} cannot have conflicting chords`) },
     cut: () => { throw new Error(`cut corner ${c} cannot have conflicting chords`) },
     "none-boundary": () => { throw new Error(`convex corner ${c} cannot have conflicting chords`) },
     "any-boundary": () => true,
     "point-hole": () => true,
-    "br-boundary": () => pattern !== 'br',
-    "tl-boundary": () => pattern !== 'tl',
+    "t-boundary": () => pattern !== 'br-bl',
+    "b-boundary": () => pattern !== 'tl-tr',
 });
 
 const innerNodes = (c: EffectiveChord) => [...unfold(c.start, cur => {
@@ -269,25 +270,25 @@ const cut = (originals: Cell[], cells: Cell[], from: Corner, dir: Direction) => 
 
     const cell_ = originals[from.cell.id]!;
 
-    if (cell_.trCorner.id === from.id) {
+    if (cell_.rCorner.id === from.id) {
         matchString(dir, {
-            top: () => {
-                if (cell_.top?.right) { cutCell(cell_.top, cell_.top.right, 'right'); }
-                else if (cell_.right?.top?.left) { cutCell(cell_.right.top, cell_.right.top.left, 'left'); }
+            tr: () => {
+                if (cell_.tr?.br) { cutCell(cell_.tr, cell_.tr.br, 'br'); }
+                else if (cell_.br?.tr?.tl) { cutCell(cell_.br.tr, cell_.br.tr.tl, 'tl'); }
                 else { throw new Error(`missing cell connection ${from} -> ${dir}`); }
             },
-            right: () => {
-                if (cell_.right?.top) { cutCell(cell_.right, cell_.right.top, 'top'); }
-                else if (cell_.top?.right?.bottom) { cutCell(cell_.top.right, cell_.top.right.bottom, 'bottom'); }
+            br: () => {
+                if (cell_.br?.tr) { cutCell(cell_.br, cell_.br.tr, 'tr'); }
+                else if (cell_.tr?.br?.bl) { cutCell(cell_.tr.br, cell_.tr.br.bl, 'bl'); }
                 else { throw new Error(`missing cell connection ${from} -> ${dir}`); }
             },
-            bottom: () => cutGrid(from.cell, from.cell.right!, 'right'),
-            left: () => cutGrid(from.cell, from.cell.top!, 'top'),
+            bl: () => cutGrid(from.cell, from.cell.br!, 'br'),
+            tl: () => cutGrid(from.cell, from.cell.tr!, 'tr'),
         });
-    } else { // from is a tl corner && from.cell.left is undefined
-        if (dir === 'left' || dir === 'bottom') { throw new Error(`cut along boundary »${from}« -> ${dir}`); }
-        else if (dir === 'right') { cutGrid(from.cell, from.cell.top!, 'top'); }
-        else if (dir === 'top') { cutGrid(from.cell.top!, from.cell.top?.left!, 'left'); }
+    } else { // from is a top (?) corner && from.cell.tl is undefined
+        if (dir === 'tl' || dir === 'bl') { throw new Error(`cut along boundary »${from}« -> ${dir}`); }
+        else if (dir === 'br') { cutGrid(from.cell, from.cell.tr!, 'tr'); }
+        else if (dir === 'tr') { cutGrid(from.cell.tr!, from.cell.tr?.tl!, 'tl'); }
         else { assertExhaustive(dir); }
     }
 
@@ -298,10 +299,10 @@ const cut = (originals: Cell[], cells: Cell[], from: Corner, dir: Direction) => 
 }
 
 const cutGrid = <T extends GridNode<T>>(from: T, to: T, dir: Direction) => matchString(dir, {
-    top: () => { from.top = to.bottom = undefined; },
-    right: () => { from.right = to.left = undefined; },
-    bottom: () => { from.bottom = to.top = undefined; },
-    left: () => { from.left = to.right = undefined; },
+    tr: () => { from.tr = to.bl = undefined; },
+    br: () => { from.br = to.tl = undefined; },
+    bl: () => { from.bl = to.tr = undefined; },
+    tl: () => { from.tl = to.br = undefined; },
 });
 
 const mkSimpleChords = (corners: Corner[]) => corners.flatMap(c => {
@@ -319,10 +320,10 @@ const mkSimpleChords = (corners: Corner[]) => corners.flatMap(c => {
 
 const dirs = (v: GridNode<any>): Direction[] => {
     const res: Direction[] = [];
-    if (v.top) { res.push('top'); }
-    if (v.right) { res.push('right'); }
-    if (v.bottom) { res.push('bottom'); }
-    if (v.left) { res.push('left'); }
+    if (v.tr) { res.push('tr'); }
+    if (v.br) { res.push('br'); }
+    if (v.bl) { res.push('bl'); }
+    if (v.tl) { res.push('tl'); }
     return res;
 }
 
@@ -330,18 +331,18 @@ const select1 = (c: Corner): SimpleChord => {
     const options: Direction[] = [];
     if (c.kind === 'any-boundary') { options.push(...dirs(c)); }
     else {
-        if (!c.top) { options.push('bottom'); }
-        else if (!c.right) { options.push('left'); }
-        else if (!c.bottom) { options.push('top'); }
-        else if (!c.left) { options.push('right'); }
+        if (!c.tr) { options.push('bl'); }
+        else if (!c.br) { options.push('tl'); }
+        else if (!c.bl) { options.push('tr'); }
+        else if (!c.tl) { options.push('br'); }
         else { throw new Error(`'select1' on degree 4 corner »${c}«`) }
 
-        if (c.kind === 'tl-boundary') {
-            if (!c.top) { options.push('left'); }
-            else if (!c.left) { options.push('top'); }
-        } else if (c.kind === 'br-boundary') {
-            if (!c.bottom) { options.push('right'); }
-            else if (!c.right) { options.push('bottom'); }
+        if (c.kind === 'b-boundary') {
+            if (!c.tr) { options.push('tl'); }
+            else if (!c.tl) { options.push('tr'); }
+        } else if (c.kind === 't-boundary') {
+            if (!c.bl) { options.push('br'); }
+            else if (!c.br) { options.push('bl'); }
         }
     }
     const dir = options[Math.floor(random() * options.length)]!;
@@ -349,9 +350,9 @@ const select1 = (c: Corner): SimpleChord => {
 };
 
 const select2 = (c: Corner): SimpleChord[] => {
-    const options: [Direction, Direction][] = [['bottom', 'top'], ['left', 'right']];
-    if (c.kind === 'tl-boundary') { options.push(['top', 'left']); }
-    if (c.kind === 'br-boundary') { options.push(['bottom', 'right']); }
+    const options: [Direction, Direction][] = [['bl', 'tr'], ['tl', 'br']];
+    if (c.kind === 'b-boundary') { options.push(['tr', 'tl']); }
+    if (c.kind === 't-boundary') { options.push(['bl', 'br']); }
     const [dir1, dir2] = options[Math.floor(random() * options.length)]!;
     return [{ start: c, dir: dir1 }, { start: c, dir: dir2 }];
 };
@@ -372,21 +373,21 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[]): BlockCrossin
         }
     }
 
-    cutIntoRects.filter(c => !c.left && !c.bottom).forEach(c => {
+    cutIntoRects.filter(c => !c.tl && !c.bl).forEach(c => {
         const bundle: Bundle = { ...nilBundle, id: c.id };
         bundles.mkSet(c.id, bundle);
         let [i, j] = [c, c];
-        while (i.top) { i = addToBundle(bundle.id, i.top); }
-        while (j.right) { j = addToBundle(bundle.id, j.right); }
+        while (i.tr) { i = addToBundle(bundle.id, i.tr); }
+        while (j.br) { j = addToBundle(bundle.id, j.br); }
         bundles.get(c.id)!.bc = [i.lineIdx, c.lineIdx, j.lineIdx + 1];
-        while (i.right) { i = addToBundle(bundle.id, i.right); }
-        while (j.top) { j = addToBundle(bundle.id, j.top); }
+        while (i.br) { i = addToBundle(bundle.id, i.br); }
+        while (j.tr) { j = addToBundle(bundle.id, j.tr); }
     });
 
     cutIntoRects.forEach(c => {
         const orig = originals[c.id]!;
-        if (!c.left && orig.left) { place(orig.left.id, c.id); }
-        if (!c.bottom && orig.bottom) { place(orig.bottom.id, c.id); }
+        if (!c.tl && orig.tl) { place(orig.tl.id, c.id); }
+        if (!c.bl && orig.bl) { place(orig.bl.id, c.id); }
     });
 
     // This is a bit tricky:
