@@ -39,7 +39,7 @@ const authorCommons = { fill: "none" };
 
 const mkAuthorStyle = (i: number) => ({
     stroke: selectColor(i),
-    'stroke-dasharray': i === 0 ? "6 3" : "none",
+    strokeDasharray: i === 0 ? "6 3" : "none",
 });
 
 const mkMeetingStyle = (config: DrawingConfig, informal: boolean): React.SVGProps<SVGPathElement> =>
