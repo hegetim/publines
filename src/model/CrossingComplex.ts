@@ -175,9 +175,9 @@ const mkCorners = (cells: Cell[]) => {
     const corners: Corner[] = cells.map(c => c.rCorner);
 
     cells.forEach(cell => {
-        // ==== top-right corner ====
+        // ==== right corner ====
 
-        // top edge
+        // top-right edge
         if (cell.tr?.br) {
             /*DEBUG*/if (cell.rCorner.tr || cell.tr.rCorner.bl) { console.warn('overwrite warning!'); }
             cell.rCorner.tr = cell.tr.rCorner;
@@ -188,7 +188,7 @@ const mkCorners = (cells: Cell[]) => {
             cell.br.tr.tl.rCorner.bl = cell.rCorner;
         }
 
-        // right edge
+        // bottom-right edge
         if (cell.br?.tr) {
             /*DEBUG*/if (cell.rCorner.br || cell.br.rCorner.tl) { console.warn('overwrite warning!'); }
             cell.rCorner.br = cell.br.rCorner;
@@ -497,3 +497,6 @@ export const mkBundles = (story: Storyline, realized: Realization): Realization 
     console.log({ msg: "after bundling", bcs: structuredClone(bcs), story, cells })
     return mkRealization(story, structuredClone(bcs), realized.initialPermutation);
 }
+
+export const unbundle = (realization: Realization): Realization =>
+    ({ ...realization, blockCrossings: mkPwCrossings(realization).map(xs => xs.map(x => [x, x, x + 1])) });

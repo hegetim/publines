@@ -89,3 +89,13 @@ export const intersperse = <T>(ts: T[], f: (before: T, i: number) => T) =>
 export const expand = <T>(ts: T[], newLen: number, zero: () => T): void => {
     ts.push(...Array.from({ length: newLen - ts.length }, zero));
 }
+
+export interface Fn<T, R> {
+    readonly then: <R2>(f: (r: R) => R2) => Fn<T, R2>,
+    readonly run: (t: T) => R,
+}
+
+export const chain = <T, R>(f: (t: T) => R): Fn<T, R> => ({
+    run: f,
+    then: <R2>(f2: (r: R) => R2) => chain((t: T) => f2(f(t)))
+});

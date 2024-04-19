@@ -26,10 +26,11 @@ export interface DataConfig {
 export const dataSources = ['dblp', 'playground'] as const;
 
 export interface AlgoConfig {
-    kind: TupleToUnion<typeof sbcmAlgos>
+    realization: TupleToUnion<typeof realizationAlgos>,
+    bundling: 'bundle' | 'ignore' | 'unbundle',
 }
 
-export const sbcmAlgos = ['1scm', '2scm', 'sbcm'] as const;
+export const realizationAlgos = ['1scm', '2scm', 'sbcm'] as const;
 
 const baseThickness = 3;
 
@@ -62,7 +63,7 @@ export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
 });
 
 export const configDefaults: UserConfig = {
-    algo: { kind: '2scm' },
+    algo: { realization: '2scm', bundling: 'ignore' },
     data: { source: 'dblp', excludeInformal: 'repeated', coauthorCap: 10 },
     style: {
         lineDistance: 24,

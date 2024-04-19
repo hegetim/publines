@@ -10,10 +10,10 @@ import { twoSidedScm } from "../model/TwoSided"
 import { StorylineSvg } from "./StorylineSvg"
 import { StorylineYTickLabels } from "./StorylineYTickLabels"
 import { MetricsComponent } from "./MetricsComponent"
-import { UserConfig, mkDrawingConfig } from "../model/UserConfig"
-import { matchByKind } from "../model/Util"
+import { AlgoConfig, UserConfig, mkDrawingConfig } from "../model/UserConfig"
+import { chain, matchString } from "../model/Util"
 import { greedySbcm } from "../model/GreedySbcm"
-import { mkBundles } from "../model/CrossingComplex"
+import { mkBundles, unbundle } from "../model/CrossingComplex"
 
 export const StorylineComponent = (props: {
     config: UserConfig,
@@ -22,13 +22,7 @@ export const StorylineComponent = (props: {
     story: Storyline,
     authors: Map<string, Author>,
 }) => {
-    const preBundles: Realization = matchByKind(props.config.algo, {
-        '1scm': () => oneSidedScm(props.story),
-        '2scm': () => twoSidedScm(props.story),
-        'sbcm': () => greedySbcm(props.story, Math.max(6, props.story.authorIds.length / 2)),
-    });
-    const realization = mkBundles(props.story, preBundles);
-    // const realization = preBundles;
+    const realization = mkPipeline(props.config.algo, props.story).run(props.story);
     const authorNames = props.story.authorIds.map(id => props.authors.get(id)!.name);
     const drawingConfig = mkDrawingConfig(props.config.style)
 
@@ -77,6 +71,21 @@ const InnerComponent = (props: {
         </div>
     </React.Fragment>
 }
+
+const mkPipeline = (config: AlgoConfig, story: Storyline) =>
+    chain(mkRealization(config)).then(mkBundling(config, story));
+
+const mkRealization = (config: AlgoConfig) => (story: Storyline) => matchString(config.realization, {
+    '1scm': () => oneSidedScm(story),
+    '2scm': () => twoSidedScm(story),
+    'sbcm': () => greedySbcm(story, Math.max(6, story.authorIds.length / 2)),
+});
+
+const mkBundling = (config: AlgoConfig, story: Storyline) => (real: Realization) => matchString(config.bundling, {
+    ignore: () => real,
+    bundle: () => mkBundles(story, real),
+    unbundle: () => unbundle(real),
+});
 
 /// assumes ego has idx 0
 export const selectColor = (i: number) => pkColors[i === 0 ? 0 : (i - 1) % (pkColors.length - 1) + 1]!;

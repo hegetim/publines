@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import _ from "lodash";
 import * as O from 'optics-ts/standalone';
 import './Settings.css';
-import { AlgoConfig, DataConfig, StyleConfig, UserConfig, dataSources, sbcmAlgos } from "../model/UserConfig";
+import { AlgoConfig, DataConfig, StyleConfig, UserConfig, dataSources, realizationAlgos } from "../model/UserConfig";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight, faToggleOff, faToggleOn } from "@fortawesome/free-solid-svg-icons";
 import { TupleToUnion, cls, matchString } from "../model/Util";
@@ -41,9 +41,13 @@ export const Settings = (props: Props) => {
             <div className="settings-inner-par">
                 <div className="settings-setting-label">(block) crossing minimization:</div>
                 <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-algo')}
-                    value={props.config.algo.kind} onChange={x => props.updateConfig(algoKind(x.target.value))}>
-                    {...mkOptions<AlgoConfig['kind']>({ '1scm': "one-sided SCM", '2scm': "two-sided SCM", 'sbcm': "greedy SBCM" })}
+                    value={props.config.algo.realization} onChange={x => props.updateConfig(algoReal(x.target.value))}>
+                    {...mkOptions<AlgoConfig['realization']>({ '1scm': "one-sided SCM", '2scm': "two-sided SCM", 'sbcm': "greedy SBCM" })}
                 </select>
+                <div className="settings-setting-label">crossings bundling:</div>
+                <SelectButton<AlgoConfig['bundling']> value={props.config.algo.bundling}
+                    setValue={key => props.updateConfig(algoBundle(key))} additionalClassNames={['settings-input-container']}
+                    labels={{ bundle: "bundle", ignore: "ignore", unbundle: "unbundle" }} />
             </div>
             <div className="settings-inner-header">Visuals</div>
             <div className="settings-inner-par">
@@ -171,8 +175,10 @@ const excludeInformal = (raw: string) => (c: UserConfig) =>
 
 const coauthorCap: (v: number | false) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'coauthorCap'));
 
-const algoKind = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('algo', 'kind'), sanitize(raw, sbcmAlgos, c.algo.kind), c);
+const algoReal = (raw: string) => (c: UserConfig) =>
+    O.set(O.compose('algo', 'realization'), sanitize(raw, realizationAlgos, c.algo.realization), c);
+
+const algoBundle: (key: AlgoConfig['bundling']) => (c: UserConfig) => UserConfig = O.set(O.compose('algo', 'bundling'));
 
 const lineDist = (raw: string) => (c: UserConfig) =>
     O.set(O.compose('style', 'lineDistance'), parsePositiveOrElse(raw, c.style.lineDistance), c);
