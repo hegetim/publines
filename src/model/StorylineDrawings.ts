@@ -89,13 +89,13 @@ export const drawSections = (info: DrawingConfig, sections: Section[], initialPe
             const ignoreTickLabel = !sect.xTickLabel || tickLabelBuf[1] === sect.xTickLabel;
             const [enumLWidth, tickLWidth] = [labelWidth(enumeratedLabel), labelWidth(sect.xTickLabel)];
             const x = Math.max(
-                ..._.range(sect.from, sect.to + 1)
+                ..._.range(sect.fromIncl, sect.toIncl + 1)
                     .map(i => xBuf[i]![0] + meetingMargin(info, xBuf[i]![1]) + meetingWidth(info) / 2),
                 enumLabelBuf + info.xAxisLabelMargin + enumLWidth / 2,
                 tickLabelBuf[0] + (ignoreTickLabel ? 0 : info.xAxisLabelMargin + tickLWidth / 2),
             );
 
-            _.range(sect.from, sect.to + 1).forEach(i => xBuf[i] = [x + meetingWidth(info) / 2, sect.kind]);
+            _.range(sect.fromIncl, sect.toIncl + 1).forEach(i => xBuf[i] = [x + meetingWidth(info) / 2, sect.kind]);
             enumLabelBuf = x + enumLWidth / 2;
             tickLabelBuf = [x + (ignoreTickLabel ? 0 : tickLWidth / 2), sect.xTickLabel ?? tickLabelBuf[1]];
 
@@ -145,8 +145,8 @@ const meetingExcess = (info: DrawingConfig): number => matchByKind(info.meetingS
 })
 
 const drawMeeting = (info: DrawingConfig, atX: number, meeting: MeetingSect): string => matchByKind(info.meetingStyle, {
-    'bar': bar => drawBar(info.lineDist, bar.relExcess, atX, meeting.from, meeting.to),
-    'metro': metro => drawMetroStation(info.lineDist, metro.relWidth, metro.relStrapSize, atX, meeting.from, meeting.to),
+    'bar': bar => drawBar(info.lineDist, bar.relExcess, atX, meeting.fromIncl, meeting.toIncl),
+    'metro': metro => drawMetroStation(info.lineDist, metro.relWidth, metro.relStrapSize, atX, meeting.fromIncl, meeting.toIncl),
 });
 
 const drawBar = (dist: number, relExcess: number, atX: number, from: number, to: number) =>

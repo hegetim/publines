@@ -18,7 +18,6 @@ export const topologicalSortWithDfs = (ids: number[], neighbors: (v: number) => 
             neighbors(v).forEach(u => visit(u));
             finished.set(v, 1);
             result.push(v)
-            console.log(`visited ${v}`)
         }
     }
 

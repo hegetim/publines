@@ -10,7 +10,7 @@ import { bfs } from "./GraphTraverse";
 const PRNG_SEED = 0x42c0ffee;
 
 interface GridNode<T extends GridNode<T>> {
-    id: number,
+    readonly id: number,
     tr: T | undefined,
     br: T | undefined,
     bl: T | undefined,
@@ -19,11 +19,10 @@ interface GridNode<T extends GridNode<T>> {
 
 interface Cell extends GridNode<Cell> {
     readonly lineIdx: number,
-    readonly rCorner: Corner,  // this corner is unique for every cell; l would also work
-    readonly meetings: number[],
+    rCorner: Corner,  // this corner is unique for every cell; l would also work
+    meetingsL: number[],
+    meetingsR: number[],
 }
-
-type Meeting = GridNode<Cell>;
 
 type Corner = GridNode<Corner> & {
     kind: 'incomplete'          // not yet determined
@@ -68,10 +67,6 @@ const unsafeCellDummyForSwap = { ...empty(-1), lineIdx: -1, meetings: [], trCorn
 const mkCells = (story: Storyline, realization: Realization) => {
     const k = realization.initialPermutation.length;
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
-    const meetings: (Meeting | undefined)[] = Array.from({ length: story.meetings.length }, () => undefined);
-    const meetingStarts: number[][] = Array.from({ length: k }, () => []);
-    const meetingEnds: number[][] = Array.from({ length: k }, () => []);
-
     let perm = [...realization.initialPermutation];
 
     const cells: Cell[] = [];
@@ -79,26 +74,18 @@ const mkCells = (story: Storyline, realization: Realization) => {
     _.zip(mkPwCrossings(realization), story.meetings).forEach(([xs, meeting], i) => {
         if (xs) {
             xs.forEach(x => {
-                const left = cellBuf[x] && (cellBuf[x]!.lineIdx === (x - 1)) ? cellBuf[x] : undefined;
-                const bottom = cellBuf[x + 1] && (cellBuf[x + 1]!.lineIdx === (x + 1)) ? cellBuf[x + 1] : undefined;
+                let [tl, left, bl] = [cellBuf[x - 1], cellBuf[x], cellBuf[x + 1]];
+                if (left && tl && left.id > tl.id) { tl = undefined; }
+                if (left && bl && left.id > bl.id) { bl = undefined; }
 
                 const rCorner: Corner = { ...empty(cells.length), kind: 'incomplete', cell: unsafeCellDummyForSwap };
-                const cell: Cell = { ...empty(cells.length), tl: left, bl: bottom, rCorner, lineIdx: x, meetings: [] };
+                const cell: Cell = { ...empty(cells.length), tl, bl, rCorner, lineIdx: x, meetingsL: [], meetingsR: [] };
                 rCorner.cell = cell;
                 cells.push(cell);
-
-                if (left) { left.br = cell; }
-                if (bottom) { bottom.tr = cell; }
-
                 cellBuf[x] = cell;
-                cellBuf[x + 1] = cell;
-
-                cell.meetings.push(...meetingEnds[x]!);
-                meetingEnds[x]!.forEach(m => meetings[m]!.br = cell);
-                meetingEnds[x] = [];
-                cell.meetings.push(...meetingStarts[x + 1]!);
-                meetingStarts[x + 1]!.forEach(m => meetings[m]!.tr = cell);
-                meetingStarts[x + 1] = [];
+                if (bl) { bl.tr = cell; }
+                if (tl) { tl.br = cell; }
+                if (left) { cell.meetingsL = left.meetingsR; }
 
                 applyX(perm, x);
             });
@@ -106,69 +93,42 @@ const mkCells = (story: Storyline, realization: Realization) => {
         if (meeting) {
             const supported = supportsMeeting(perm, meeting);
             if (!supported) { throw new Error(`meeting ${meeting} is unsupported by ${perm}`); }
-            const inC: Meeting = empty(i);
-            const [atFrom, atTo] = [cellBuf[supported.from], cellBuf[supported.to]];
-            if (atFrom && atFrom.lineIdx === supported.from - 1) {
-                atFrom.meetings.push(i);
-                inC.tl = atFrom;
-            }
-            if (atTo && atTo.lineIdx === supported.to) {
-                atTo.meetings.push(i);
-                inC.bl = atTo;
-            }
-            meetingStarts[supported.from]!.push(i);
-            meetingEnds[supported.to]!.push(i);
-            meetings[i] = inC;
+            const [atFrom, atTo] = [cellBuf[supported.fromIncl - 1], cellBuf[supported.toIncl]];
+            if (atFrom) { atFrom.meetingsR.push(i); }
+            if (atTo) { atTo.meetingsR.push(i); }
         } else { console.warn(`unnecessary crossings ${xs} after the last meeting`); }
     });
-
-    checkMeetingConflicts(cells, meetings.map(x => x!));
 
     return cells;
 };
 
-const checkMeetingConflicts = (cells: Cell[], meetings: Meeting[]) => {
-    const n = meetings.length;
-    const mm: (0 | 1 | 2)[][] = Array.from({ length: n }, () => Array.from({ length: n }, () => 0));
-    /// 0 => unknown safe
-    /// 1 => known safe
-    /// 2 => unsafe
-
+const checkMeetingConflicts = (cells: Cell[]): { kind: 'conflict', at: number } | { kind: 'no-conflict' } => {
     const allBefore = (c: Cell): Cell[] =>
         [...bfs(c.id, v => _.compact([cells[v]!.tl, cells[v]!.bl]).map(c => c.id))].map(i => cells[i]!);
-    const allAfter = (c: Cell): Cell[] =>
-        [...bfs(c.id, v => _.compact([cells[v]!.tr, cells[v]!.br]).map(c => c.id))].map(i => cells[i]!);
 
     const allTR = (c: Cell): Cell[] => [...unfold(c, c => c.tr)];
     const allBR = (c: Cell): Cell[] => [...unfold(c, c => c.br)];
 
-    const meetingsBefore = (c: Cell): Meeting[] =>
-        c.meetings.filter(i => meetings[i]!.tr === c || meetings[i]!.br === c).map(i => meetings[i]!);
-    const meetingsAfter = (c: Cell): Meeting[] =>
-        c.meetings.filter(i => meetings[i]!.tl === c || meetings[i]!.bl === c).map(i => meetings[i]!);
-
-    cells.forEach(cell => {
-        const bef = meetingsBefore(cell);
-        allAfter(cell).forEach(w => {
-            bef.forEach(m1 => meetingsAfter(w).filter(m => m.id > m1.id).forEach(m2 => mm[m1.id]![m2.id] = 1));
-        });
-    });
-
-    const doHop2 = (hop1: Cell, cs: Cell[], afterStart: Meeting[]) => cs.forEach(hop2 =>
-        allBefore(hop2).forEach(end => meetingsBefore(end).forEach(m2 =>
-            afterStart.filter(m => m.id < m2.id && mm[m.id]![m2.id] === 0).forEach(m1 => {
-                mm[m1.id]![m2.id] = 2;
-                console.warn(`conflicting meetings detected: ${m1.id} vs. ${m2.id}`)
+    const doHop2 = (hop1: Cell, cs: Cell[], afterStart: number[]) => cs.forEach(hop2 =>
+        allBefore(hop2).forEach(end => end.meetingsL.forEach(m2 =>
+            afterStart.filter(m => m < m2).forEach(m1 => {
+                console.warn(`conflicting meetings detected: ${m1} vs. ${m2}`)
                 console.warn(`critical path from ${hop1.id} to ${hop2.id}`)
+                throw { kind: 'conflict', at: m2 };
             }))));
 
-    cells.forEach(cell => {
-        const afterStart = meetingsAfter(cell);
-        allBefore(cell).forEach(hop1 => {
-            doHop2(hop1, allTR(hop1), afterStart);
-            doHop2(hop1, allBR(hop1), afterStart);
-        })
-    });
+    try {
+        cells.forEach(cell => {
+            const afterStart = cell.meetingsR;
+            allBefore(cell).forEach(hop1 => {
+                doHop2(hop1, allTR(hop1), afterStart);
+                doHop2(hop1, allBR(hop1), afterStart);
+            })
+        });
+        return { kind: 'no-conflict' };
+    } catch (res) {
+        return res as { kind: 'conflict', at: number };
+    }
 }
 
 const mkCorners = (cells: Cell[]) => {
@@ -203,7 +163,7 @@ const mkCorners = (cells: Cell[]) => {
         if (cell.tr && cell.br) {
             if (cell.tr.br && cell.br.tr) {
                 if (cell.tr.br !== cell.br.tr) { throw new Error('degenerate face'); }
-                if (hasNoDuplicates([...cell.meetings, ...cell.tr.br.meetings])) {
+                if (hasNoDuplicates([...cell.meetingsR, ...cell.tr.br.meetingsL])) {
                     cell.rCorner.kind = 'internal';
                 } else {
                     cell.rCorner.kind = 'point-hole';
@@ -243,7 +203,6 @@ const mkCorners = (cells: Cell[]) => {
         }
     });
 
-    /*DEBUG*/if (!hasNoDuplicates(corners.map(c => c.id))) { console.error("duplicate corner id") }
     return corners;
 };
 
@@ -489,6 +448,8 @@ const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[]): R
 export const mkBundles = (story: Storyline, realized: Realization): Realization => {
     random = splitmix32(PRNG_SEED);
     const cells = mkCells(story, realized);
+    let maybeConflict = checkMeetingConflicts(cells);
+    if (maybeConflict.kind === "conflict") { return splitAt(story, realized, maybeConflict.at); }
     const corners = mkCorners(cells);
     const snapshot = structuredClone(cells);
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
@@ -496,6 +457,26 @@ export const mkBundles = (story: Storyline, realized: Realization): Realization 
     const bcs = mkBlockCrossings(snapshot, cells);
     console.log({ msg: "after bundling", bcs: structuredClone(bcs), story, cells })
     return mkRealization(story, structuredClone(bcs), realized.initialPermutation);
+}
+
+const splitAt = (story: Storyline, realized: Realization, atExcl: number): Realization => {
+    const storyA: Storyline = { ...story, meetings: story.meetings.slice(0, atExcl) };
+    const storyB: Storyline = { ...story, meetings: story.meetings.slice(atExcl) };
+    const realA: Realization = { ...realized, blockCrossings: realized.blockCrossings.slice(0, atExcl) };
+    const realB: Realization =
+        { initialPermutation: endPermutation(realA), blockCrossings: realized.blockCrossings.slice(atExcl) };
+
+    const [bundledA, bundledB] = [mkBundles(storyA, realA), mkBundles(storyB, realB)];
+    return {
+        initialPermutation: bundledA.initialPermutation,
+        blockCrossings: [...bundledA.blockCrossings, ...bundledB.blockCrossings]
+    };
+}
+
+const endPermutation = (realized: Realization): number[] => {
+    let perm = [...realized.initialPermutation];
+    realized.blockCrossings.forEach(bcs => bcs.forEach(bc => perm = applyBc(perm, ...bc)));
+    return perm;
 }
 
 export const unbundle = (realization: Realization): Realization =>

@@ -51,7 +51,7 @@ export const supportsMeeting = (perm: number[], meeting: number[]) => {
     const i = perm.findIndex(j => meeting.includes(j));
     const j = meeting.length;
     if (i >= 0 && i + j <= perm.length && perm.slice(i, i + j).every(k => meeting.includes(k))) {
-        return { from: i, to: i + j - 1 };
+        return { fromIncl: i, toIncl: i + j - 1 };
     } else {
         return false;
     }

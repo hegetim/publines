@@ -8,8 +8,8 @@ export interface MeetingSect {
     kind: 'meeting',
     ordinal: number,
     xTickLabel: string | undefined,
-    from: number,
-    to: number,
+    fromIncl: number,
+    toIncl: number,
 }
 
 export interface BlockCrossingSect {
