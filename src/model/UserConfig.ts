@@ -1,6 +1,7 @@
 import { DrawingConfig, MeetingStyle, Stretch } from "./StorylineDrawings";
 import { ExcludeInformal } from "./Metadata";
 import { TupleToUnion, matchString } from "./Util";
+import base64js from "base64-js";
 
 export interface UserConfig {
     style: StyleConfig,
@@ -74,3 +75,29 @@ export const configDefaults: UserConfig = {
         stretch: 'normal',
     },
 }
+
+export const store = async (conf: UserConfig) => {
+    const json = JSON.stringify(conf);
+    const fullSize = encodeURI(json).length;
+    const stream = new Blob([json]).stream();
+    const compressed = stream.pipeThrough<Uint8Array>(new CompressionStream('deflate-raw'));
+    const blob = new Uint8Array(await new Response(compressed).arrayBuffer());
+    const res = base64js.fromByteArray(blob);
+    console.info(`compression ratio: ${res.length / fullSize * 100}%`);
+    return res;
+}
+
+export const unsafeLoad = async (raw: string) => {
+    try {
+        const blob = base64js.toByteArray(raw);
+        const stream = new Blob([blob]).stream();
+        const inflated = stream.pipeThrough<Uint8Array>(new DecompressionStream('deflate-raw'));
+        return await new Response(inflated).json()
+    } catch (err) {
+        console.warn(err);
+        return {};
+    }
+}
+
+export const loadWithDefaults = async (raw: string | undefined): Promise<UserConfig> =>
+    raw ? ({ ...configDefaults, ...await unsafeLoad(raw) }) : configDefaults;

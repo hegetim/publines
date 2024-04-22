@@ -1,11 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import _ from 'lodash';
 import * as Dblp from '../model/Dblp';
 import { Author, Publication, filterInformal } from '../model/Metadata';
 import { MainAuthor } from './MainAuthor';
 import { StorylineComponent } from './StorylineComponent';
-import { UserConfig, configDefaults } from '../model/UserConfig';
+import * as Conf from '../model/UserConfig';
 import { Settings } from './Settings';
 import { mkStoryline } from '../model/Storyline';
 import { Playground, PlaygroundData, fakeMainAuthor, fakePublications, fromStoryline } from './Playground';
@@ -13,7 +13,7 @@ import { Bibliography } from './Bibliography';
 import { Loading } from './Commons';
 
 const App = () => {
-    const [config, setConfig] = useState(configDefaults);
+    const [config, setConfig] = useState(Conf.configDefaults);
     const [mainAuthor, setMainAuthor] = useState<Author | undefined>();
     const [publications, setPublications] = useState<FetchedPublications>();
     const [playgroundData, setPlaygroundData] = useState<PlaygroundData>({ meetings: [] });
@@ -30,6 +30,7 @@ const App = () => {
                 setPublications(parsed);
             }
         });
+        saveToUrl(author, undefined);
     }, [setPublications, setMainAuthor]);
 
     const handlePlaygroundRevert = useCallback(() => {
@@ -41,13 +42,29 @@ const App = () => {
         }
     }, [publications, mainAuthor, config]);
 
+    const updateConfig = useCallback((f: (c: Conf.UserConfig) => Conf.UserConfig) => {
+        setConfig((c: Conf.UserConfig) => {
+            const newConfig = f(c);
+            saveToUrl(undefined, newConfig);
+            return newConfig;
+        });
+    }, [setConfig]);
+
+    useEffect(() => {
+        restoreFromUrl().then(res => {
+            console.log(res);
+            if (res.mainAuthor) { handleAuthorChanged(res.mainAuthor); }
+            if (res.settings) { setConfig(res.settings); }
+        })
+    }, []);
+
     return <div className="App">
         <h1>Publines</h1>
         <p className='intro-par'>Visualize joint publications with your coauthors over time.</p>
         {config.data.source === 'dblp'
             ? <MainAuthor author={mainAuthor} setAuthor={handleAuthorChanged} fetchAuthors={fetchAuthors} />
             : <Playground data={playgroundData} setData={setPlaygroundData} rebuildData={handlePlaygroundRevert} />}
-        <Settings config={config} updateConfig={setConfig} />
+        <Settings config={config} updateConfig={updateConfig} />
         {config.data.source === 'dblp'
             ? <PublicationsComponent publications={publications} mainAuthor={mainAuthor} config={config}
                 setMainAuthor={handleAuthorChanged} />
@@ -62,7 +79,7 @@ const PublicationsComponent = (props: {
     publications: FetchedPublications,
     mainAuthor: Author | undefined,
     setMainAuthor: (a: Author) => void,
-    config: UserConfig,
+    config: Conf.UserConfig,
 }) => {
     if (!props.publications || !props.mainAuthor) {
         return [];
@@ -84,7 +101,7 @@ const PublicationsComponent = (props: {
     }
 }
 
-const handlePublications = (publications: Publication[], mainAuthor: Author, config: UserConfig) => {
+const handlePublications = (publications: Publication[], mainAuthor: Author, config: Conf.UserConfig) => {
     const filtered = filterInformal(publications, config.data.excludeInformal);
     const [story, authors] = mkStoryline(filtered, mainAuthor, config.data.coauthorCap);
     return { filtered, story, authors };
@@ -92,5 +109,26 @@ const handlePublications = (publications: Publication[], mainAuthor: Author, con
 
 const fetchAuthors = (s: string) => Dblp.findAuthor(s)
     .then(res => res === 'not_ok' || res === 'error' ? 'error' : Dblp.mkSuggestions(res));
+
+const saveToUrl = async (mainAuthor: Author | undefined, settings: Conf.UserConfig | undefined) => {
+    if (!mainAuthor && !settings) { return; }
+    const url = new URL(window.location.href);
+    if (mainAuthor) { url.searchParams.set('p', JSON.stringify(mainAuthor)); }
+    if (settings) { url.searchParams.set('s', await Conf.store(settings)); }
+    window.history.pushState({}, "", url);
+}
+
+const restoreFromUrl = async () => {
+    const params = new URLSearchParams(window.location.search);
+    const res: { mainAuthor?: Author | undefined, settings?: Conf.UserConfig | undefined } = {};
+    if (params.has('p')) { res.mainAuthor = JSON.parse(params.get('p') ?? 'undefined') }
+    if (params.has('s')) { res.settings = await Conf.loadWithDefaults(params.get('s') ?? undefined) }
+    return res;
+}
+
+interface QueryData {
+    p: Author | undefined,
+    s: string,
+}
 
 export default App;

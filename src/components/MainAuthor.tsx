@@ -14,7 +14,7 @@ export const MainAuthor = (props: {
     setAuthor: (author: Author) => Promise<void> | void,
     fetchAuthors: (searchString: string) => Promise<FetchedAuthors>
 }) => {
-    const [isEditing, setEditing] = useState(props.author === undefined);
+    const [isEditing, setEditing] = useState(false);
     const [searchString, setSearchString] = useState("");
     const [resultsList, setResultsList] = useState<FetchedAuthors>('init');
 
