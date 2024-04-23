@@ -102,7 +102,7 @@ const mkCells = (story: Storyline, realization: Realization) => {
     return cells;
 };
 
-const checkMeetingConflicts = (cells: Cell[], off: number): { kind: 'conflict', at: number } | { kind: 'no-conflict' } => {
+const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number } | false => {
     const allBefore = (c: Cell): Cell[] =>
         [...bfs(c.id, v => _.compact([cells[v]!.tl, cells[v]!.bl]).map(c => c.id))].map(i => cells[i]!);
 
@@ -114,7 +114,7 @@ const checkMeetingConflicts = (cells: Cell[], off: number): { kind: 'conflict', 
             afterStart.filter(m => m <= m2).forEach(m1 => {
                 console.warn(`conflicting meetings detected: ${1 + m1 + off} vs. ${1 + m2 + off}`)
                 console.warn(`critical path from ${hop1.id} to ${hop2.id}`)
-                throw { kind: 'conflict', at: m2 };
+                throw { conflictAt: m1 };
             }))));
 
     try {
@@ -125,9 +125,9 @@ const checkMeetingConflicts = (cells: Cell[], off: number): { kind: 'conflict', 
                 doHop2(hop1, allBR(hop1), afterStart);
             })
         });
-        return { kind: 'no-conflict' };
+        return false;
     } catch (res) {
-        return res as { kind: 'conflict', at: number };
+        return res as { conflictAt: number };
     }
 }
 
@@ -425,14 +425,15 @@ const mergeBundles = (a: Bundle, b: Bundle): Bundle =>
     ({ ...(a.id === -1 ? b : a), placeBefore: _.union(a.placeBefore, b.placeBefore) });
 
 const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], off: number): Realization => {
-    console.log(`initial permutation is ${init}`)
+    console.debug(`initial permutation is ${init}`)
     let perm = init;
     bcs.reverse();
     const sequences = story.meetings.map((meeting, i) => {
         const res: BlockCrossings = [];
+        console.debug(`meeting ${meeting} (#${i + off + 1})`);
         while (!supportsMeeting(perm, meeting)) {
             const bc = bcs.pop();
-            console.log(`meeting ${meeting} (#${i + off + 1}) does not fit ${perm} so we try bc ${bc}`)
+            console.debug(`meeting does not fit ${perm} so we try bc ${bc}`)
             if (bc !== undefined) {
                 perm = applyBc(perm, ...bc);
                 res.push(bc);
@@ -442,25 +443,29 @@ const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], of
         }
         return res;
     });
+    if (bcs.length > 0) {
+        sequences.push(bcs.reverse());
+        console.info(`${bcs.length} excess block crossing${bcs.length === 1 ? "" : "s"}: ${bcs.join("; ")}`);
+    }
     return { initialPermutation: init, blockCrossings: sequences };
 }
 
-export const mkBundles = (story: Storyline, realized: Realization, off: number): Realization => {
+export const mkBundles = (story: Storyline, realized: Realization, off: number = 0): Realization => {
     random = splitmix32(PRNG_SEED);
     const cells = mkCells(story, realized);
-    let maybeConflict = checkMeetingConflicts(cells, off);
-    if (maybeConflict.kind === "conflict") { return splitAt(story, realized, maybeConflict.at, off); }
+    let maybeConflict = hasMeetingConflicts(cells, off);
+    if (maybeConflict) { return splitAt(story, realized, maybeConflict.conflictAt + 1, off); }
     const corners = mkCorners(cells);
     const snapshot = structuredClone(cells);
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     const bcs = mkBlockCrossings(snapshot, cells);
-    console.log({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcs), story, cells })
+    console.debug({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcs), story, cells })
     return mkRealization(story, structuredClone(bcs), realized.initialPermutation, off);
 }
 
 const splitAt = (story: Storyline, realized: Realization, atExcl: number, off: number): Realization => {
-    console.log(`splitting at ${atExcl + off + 1}`);
+    console.debug(`splitting at ${atExcl + off + 1}`);
     const storyA: Storyline = { ...story, meetings: story.meetings.slice(0, atExcl) };
     const storyB: Storyline = { ...story, meetings: story.meetings.slice(atExcl) };
     const realA: Realization = { ...realized, blockCrossings: realized.blockCrossings.slice(0, atExcl) };
@@ -468,10 +473,14 @@ const splitAt = (story: Storyline, realized: Realization, atExcl: number, off: n
         { initialPermutation: endPermutation(realA), blockCrossings: realized.blockCrossings.slice(atExcl) };
 
     const [bundledA, bundledB] = [mkBundles(storyA, realA, off), mkBundles(storyB, realB, off + atExcl)];
-    return {
-        initialPermutation: bundledA.initialPermutation,
-        blockCrossings: [...bundledA.blockCrossings, ...bundledB.blockCrossings]
-    };
+    const blockCrossings = overlappingJoin(bundledA.blockCrossings, storyA.meetings.length, bundledB.blockCrossings);
+    return { initialPermutation: bundledA.initialPermutation, blockCrossings };
+}
+
+const overlappingJoin = <T>(a: T[][], n: number, b: T[][]) => {
+    if (a.length === n) { return [...a, ...b]; }
+    else if (a.length === n + 1) { return [...a.slice(0, -1), [...a[n]!, ...b[0]!], ...b.slice(1)]; }
+    else { throw new Error('array size mismatch') }
 }
 
 const endPermutation = (realized: Realization): number[] => {
