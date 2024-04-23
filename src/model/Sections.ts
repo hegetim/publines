@@ -39,7 +39,7 @@ export const mkSections = (story: Storyline, realization: Realization, publ: Pub
             });
         }
         const supported = supportsMeeting(perm, meeting)
-        if (!supported) { throw new Error(`meeting ${meeting} is unsupported by <${perm}>`); }
+        if (!supported) { throw new Error(`meeting ${meeting} (#${ordinal + 1}) is unsupported by <${perm}>`); }
         const meta = publ[ordinal]!
         result.push({ kind: 'meeting', ordinal, xTickLabel: meta.year.toString(), ...supported });
     });

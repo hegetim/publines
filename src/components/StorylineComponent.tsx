@@ -83,7 +83,7 @@ const mkRealization = (config: AlgoConfig) => (story: Storyline) => matchString(
 
 const mkBundling = (config: AlgoConfig, story: Storyline) => (real: Realization) => matchString(config.bundling, {
     ignore: () => real,
-    bundle: () => mkBundles(story, real),
+    bundle: () => mkBundles(story, real, 0),
     unbundle: () => unbundle(real),
 });
 
