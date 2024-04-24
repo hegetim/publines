@@ -383,8 +383,9 @@ const select2 = (c: Corner): SimpleChord[] => {
     return [{ start: c, dir: dir1 }, { start: c, dir: dir2 }];
 };
 
-const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[]): BlockCrossings => {
+const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number): BlockCrossings => {
     const bundles = DisjointSets(mergeBundles, () => nilBundle);
+    const cellBuf: (Cell | undefined)[] = Array.from({ length: k });
 
     const addToBundle = (bundleId: number, cell: Cell) => {
         if (!bundles.contains(cell.id)) { bundles.mkSet(cell.id, nilBundle); }
@@ -414,10 +415,11 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[]): BlockCrossin
         const orig = originals[c.id]!;
         if (!c.tl && orig.tl) { place(orig.tl.id, c.id); }
         if (!c.bl && orig.bl) { place(orig.bl.id, c.id); }
+        const left = cellBuf[c.lineIdx];
+        if (left && bundles.contains(left.id) && bundles.contains(c.id)) { place(left.id, c.id); }
+        cellBuf[c.lineIdx] = c;
     });
 
-    // This is a bit tricky:
-    // We need "stable" topological sorting (i.e. connected components must remain in input order).
     const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
     const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
 
@@ -464,7 +466,7 @@ export const mkBundles = (story: Storyline, realized: Realization, off: number =
     const snapshot = structuredClone(cells);
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
-    const bcs = mkBlockCrossings(snapshot, cells);
+    const bcs = mkBlockCrossings(snapshot, cells, story.authorIds.length);
     console.debug({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcs), story, cells })
     return mkRealization(story, structuredClone(bcs), realized.initialPermutation, off);
 }
