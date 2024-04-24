@@ -58,9 +58,11 @@ export const MainAuthor = (props: {
         } else {
             return <React.Fragment>
                 <input className="author-name-input" type="search" value={searchString} onChange={handleTyping} />
-                <div {...cls("author-cancel-btn", "click-me")} onClick={() => setEditing(false)}>
-                    <FontAwesomeIcon icon={faXmark} />
-                </div>
+                {isEditing ?
+                    <div {...cls("author-cancel-btn", "click-me")} onClick={() => setEditing(false)}>
+                        <FontAwesomeIcon icon={faXmark} />
+                    </div> : ""
+                }
                 <div {...cls("author-results-container", {
                     'author-results-empty': !(_.isArray(resultsList) && resultsList.length > 0)
                 })}> {mkResultsList()} </div>
