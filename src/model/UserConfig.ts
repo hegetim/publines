@@ -64,7 +64,7 @@ export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
 });
 
 export const configDefaults: UserConfig = {
-    algo: { realization: '2scm', bundling: 'ignore' },
+    algo: { realization: '2scm', bundling: 'bundle' },
     data: { source: 'dblp', excludeInformal: 'repeated', coauthorCap: 10 },
     style: {
         lineDistance: 24,
