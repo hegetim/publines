@@ -63,20 +63,27 @@ const applyX = (perm: number[], x: number) => {
 };
 
 const unsafeCellDummyForSwap = { ...empty(-1), lineIdx: -1, meetings: [], trCorner: null } as unknown as Cell;
+type CellDummy = { meetingsR: number[], id: 'dummy' };
 
 const mkCells = (story: Storyline, realization: Realization) => {
     const k = realization.initialPermutation.length;
-    const cellBuf: (Cell | undefined)[] = Array.from({ length: k }, () => undefined);
+    const cellBuf: (Cell | CellDummy)[] = Array.from({ length: k }, () => ({ meetingsR: [], id: 'dummy' }));
     let perm = [...realization.initialPermutation];
+
+    const realCell = (i: number): Cell | undefined => {
+        const cell = cellBuf[i];
+        if (cell && cell.id === 'dummy') { return undefined; }
+        else { return cell; }
+    }
 
     const cells: Cell[] = [];
 
     _.zip(mkPwCrossings(realization), story.meetings).forEach(([xs, meeting], i) => {
         if (xs) {
             xs.forEach(x => {
-                let [tl, left, bl] = [cellBuf[x - 1], cellBuf[x], cellBuf[x + 1]];
-                if (left && tl && left.id > tl.id) { tl = undefined; }
-                if (left && bl && left.id > bl.id) { bl = undefined; }
+                let [tl, left, bl] = [realCell(x - 1), cellBuf[x], realCell(x + 1)];
+                if (left && left.id !== 'dummy' && tl && left.id > tl.id) { tl = undefined; }
+                if (left && left.id !== 'dummy' && bl && left.id > bl.id) { bl = undefined; }
 
                 const rCorner: Corner = { ...empty(cells.length), kind: 'incomplete', cell: unsafeCellDummyForSwap };
                 const cell: Cell = { ...empty(cells.length), tl, bl, rCorner, lineIdx: x, meetingsL: [], meetingsR: [] };
@@ -112,14 +119,14 @@ const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number }
     const doHop2 = (hop1: Cell, cs: Cell[], afterStart: number[]) => cs.forEach(hop2 =>
         allBefore(hop2).forEach(end => end.meetingsL.forEach(m2 =>
             afterStart.filter(m => m <= m2).forEach(m1 => {
-                console.warn(`conflicting meetings detected: ${1 + m1 + off} vs. ${1 + m2 + off}`)
-                console.warn(`critical path from ${hop1.id} to ${hop2.id}`)
+                console.debug(`conflicting meetings detected: ${1 + m1 + off} vs. ${1 + m2 + off}`)
+                console.debug(`critical path from ${hop1.id} to ${hop2.id}`)
                 throw { conflictAt: m1 };
             }))));
 
     try {
         cells.forEach(cell => {
-            const afterStart = cell.meetingsR.sort((a, b) => b - a);
+            const afterStart = cell.meetingsR.sort((a, b) => b - a); // sort descending
             allBefore(cell).forEach(hop1 => {
                 doHop2(hop1, allTR(hop1), afterStart);
                 doHop2(hop1, allBR(hop1), afterStart);
@@ -414,8 +421,6 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[]): BlockCrossin
     const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
     const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
 
-    bundles.debug();
-
     return ordered.map(id => bundles.get(id)!.bc);
 }
 
@@ -425,15 +430,15 @@ const mergeBundles = (a: Bundle, b: Bundle): Bundle =>
     ({ ...(a.id === -1 ? b : a), placeBefore: _.union(a.placeBefore, b.placeBefore) });
 
 const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], off: number): Realization => {
-    console.debug(`initial permutation is ${init}`)
+    // console.debug(`initial permutation is ${init}`)
     let perm = init;
     bcs.reverse();
     const sequences = story.meetings.map((meeting, i) => {
         const res: BlockCrossings = [];
-        console.debug(`meeting ${meeting} (#${i + off + 1})`);
+        // console.debug(`meeting ${meeting} (#${i + off + 1})`);
         while (!supportsMeeting(perm, meeting)) {
             const bc = bcs.pop();
-            console.debug(`meeting does not fit ${perm} so we try bc ${bc}`)
+            // console.debug(`meeting does not fit ${perm} so we try bc ${bc}`)
             if (bc !== undefined) {
                 perm = applyBc(perm, ...bc);
                 res.push(bc);

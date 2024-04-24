@@ -7,7 +7,6 @@ export interface DisjointSets<T> {
     readonly sameSet: (a: number, b: number) => boolean,
     readonly contains: (key: number) => boolean,
     readonly values: () => T[],
-    readonly debug: () => void;
 }
 
 interface Entry<T> {
@@ -50,12 +49,12 @@ export const DisjointSets = <T>(merger: (t1: T, t2: T) => T, zero: () => T): Dis
             if (aa.rank > bb.rank) {
                 bb.pointer = a;
                 aa.data = merger(aa.data, bb.data);
-                // bb.data = zero();
+                bb.data = zero();
                 return a;
             } else {
                 aa.pointer = b;
                 bb.data = merger(bb.data, aa.data);
-                // aa.data = zero();
+                aa.data = zero();
                 if (aa.rank === bb.rank) { bb.rank += 1; }
                 return b;
             }
@@ -66,5 +65,5 @@ export const DisjointSets = <T>(merger: (t1: T, t2: T) => T, zero: () => T): Dis
 
     const values = () => entries.filter((e, i) => e.pointer === i).map(e => e.data!)
 
-    return { get, mkSet, union, sameSet, contains, values, debug: () => console.log({ msg: "disjoint-sets", entries }) };
+    return { get, mkSet, union, sameSet, contains, values };
 }
