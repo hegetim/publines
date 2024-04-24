@@ -3,7 +3,7 @@ import "./MainAuthor.css"
 import _ from "lodash";
 import { Author } from "../model/Metadata";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPencil } from "@fortawesome/free-solid-svg-icons";
+import { faPencil, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { assertExhaustive, cls } from "../model/Util";
 import { Loading } from "./Commons";
 
@@ -41,7 +41,7 @@ export const MainAuthor = (props: {
             return <span className="author-results-empty">no results found</span>;
         } else if (resultsList) {
             return resultsList.map(([hint, author]) =>
-                <div className="author-result-item" key={author.id} title={hint}
+                <div {...cls("author-result-item", "click-me")} key={author.id} title={hint}
                     onClick={() => { setEditing(false); props.setAuthor(author); }}>{hint}</div>
             );
         } else { return assertExhaustive(resultsList); }
@@ -51,14 +51,16 @@ export const MainAuthor = (props: {
         if (!isEditing && props.author) {
             return <div className="author-name-ready">
                 <span className="main-author-label">{props.author.name}</span>
-                <div className="author-edit-btn" onClick={() => setEditing(true)}>
+                <div {...cls("author-edit-btn", "click-me")} onClick={() => setEditing(true)}>
                     <FontAwesomeIcon icon={faPencil} />
                 </div>
             </div>;
         } else {
             return <React.Fragment>
-                <input className="author-name-input" type="search" value={searchString}
-                    onChange={handleTyping} />
+                <input className="author-name-input" type="search" value={searchString} onChange={handleTyping} />
+                <div {...cls("author-cancel-btn", "click-me")} onClick={() => setEditing(false)}>
+                    <FontAwesomeIcon icon={faXmark} />
+                </div>
                 <div {...cls("author-results-container", {
                     'author-results-empty': !(_.isArray(resultsList) && resultsList.length > 0)
                 })}> {mkResultsList()} </div>

@@ -1,10 +1,7 @@
 .author-name-container {
     display: grid;
-    grid-template-columns: auto 1fr;
-}
-
-.author-name-label {
-    margin-right: 1ex;
+    grid-template-columns: auto auto 1fr;
+    column-gap: 1ex;
 }
 
 .author-name-input {
@@ -14,7 +11,6 @@
 .author-edit-btn {
     display: inline;
     margin: 0px 1ex;
-    cursor: pointer;
 }
 
 .main-author-label {
@@ -22,7 +18,7 @@
 }
 
 .author-results-container {
-    grid-column: span 2;
+    grid-column: span 3;
     justify-self: start;
     margin: 1ex 0 0 2ex;
     padding: 5px;
@@ -35,10 +31,6 @@
 .author-results-container.author-results-empty {
     border: none;
     padding: 0;
-}
-
-.author-result-item {
-    cursor: pointer;
 }
 
 .author-result-item:hover {
