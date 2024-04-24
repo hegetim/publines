@@ -83,7 +83,7 @@ export const store = async (conf: UserConfig) => {
     const compressed = stream.pipeThrough<Uint8Array>(new CompressionStream('deflate-raw'));
     const blob = new Uint8Array(await new Response(compressed).arrayBuffer());
     const res = base64js.fromByteArray(blob);
-    console.info(`compression ratio: ${res.length / fullSize * 100}%`);
+    console.info(`settings compression ratio: ${res.length / fullSize * 100}%`);
     return res;
 }
 

@@ -61,11 +61,11 @@ export const Settings = (props: Props) => {
                 <SelectButton<StyleConfig['authorLineThickness']> value={props.config.style.authorLineThickness}
                     setValue={key => props.updateConfig(lineThickness(key))} additionalClassNames={['settings-input-container']}
                     labels={{ thin: "thin", normal: "normal", heavier: "heavier", fat: "fat" }} />
-                <ToggleMeetingStyleWidget {...props} />
                 <div className="settings-setting-label">crossings stretch:</div>
                 <SelectButton<StyleConfig['stretch']> value={props.config.style.stretch}
                     setValue={key => props.updateConfig(stretch(key))} additionalClassNames={['settings-input-container']}
                     labels={{ condensed: "condensed", normal: "normal", expanded: "expanded" }} />
+                <ToggleMeetingStyleWidget {...props} />
                 <ToggleXAxisPosWidget {...props} />
                 <EnumerationStyleWidget {...props} />
             </div>
