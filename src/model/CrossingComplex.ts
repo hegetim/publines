@@ -492,7 +492,7 @@ const overlappingJoin = <T>(a: T[][], n: number, b: T[][]) => {
 
 const endPermutation = (realized: Realization): number[] => {
     let perm = [...realized.initialPermutation];
-    realized.blockCrossings.forEach(bcs => bcs.forEach(bc => perm = applyBc(perm, ...bc)));
+    realized.blockCrossings.flat().forEach(bc => perm = applyBc(perm, ...bc));
     return perm;
 }
 

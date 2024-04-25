@@ -22,23 +22,28 @@ export const StorylineComponent = (props: {
     story: Storyline,
     authors: Map<string, Author>,
 }) => {
-    const realization = mkPipeline(props.config.algo, props.story).run(props.story);
-    const authorNames = props.story.authorIds.map(id => props.authors.get(id)!.name);
-    const drawingConfig = mkDrawingConfig(props.config.style)
+    try {
+        const realization = mkPipeline(props.config.algo, props.story).run(props.story);
+        const authorNames = props.story.authorIds.map(id => props.authors.get(id)!.name);
+        const drawingConfig = mkDrawingConfig(props.config.style)
 
-    const sections = mkSections(props.story, realization, props.publications)!;
-    const drawn = drawSections(drawingConfig, sections, realization.initialPermutation);
+        const sections = mkSections(props.story, realization, props.publications)!;
+        const drawn = drawSections(drawingConfig, sections, realization.initialPermutation);
 
-    console.log('rendered storyline component (this draws a storyline)')
+        console.log('rendered storyline component (this draws a storyline)')
 
-    return <React.Fragment>
-        <div className="story-main-container">
-            <InnerComponent authorNames={authorNames} drawingConfig={drawingConfig} drawn={drawn}
-                meetingMeta={props.publications.map(p => ({ title: p.title, informal: p.informal }))}
-                realization={realization} />
-        </div>
-        <MetricsComponent data={realization} />
-    </React.Fragment>
+        return <React.Fragment>
+            <div className="story-main-container">
+                <InnerComponent authorNames={authorNames} drawingConfig={drawingConfig} drawn={drawn}
+                    meetingMeta={props.publications.map(p => ({ title: p.title, informal: p.informal }))}
+                    realization={realization} />
+            </div>
+            <MetricsComponent data={realization} />
+        </React.Fragment>
+    } catch (err) {
+        console.error(err);
+        return <span className='story-main-error'>Could not draw storyline</span>;
+    }
 }
 
 /// separate so that we do not recalculate the whole storyline on each scroll...
