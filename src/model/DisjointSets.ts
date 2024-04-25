@@ -63,7 +63,7 @@ export const DisjointSets = <T>(merger: (t1: T, t2: T) => T, zero: () => T): Dis
 
     const union = (a: number, b: number) => entries[link(findSet(a), findSet(b))]?.data!;
 
-    const values = () => entries.filter((e, i) => e.pointer === i).map(e => e.data!)
+    const values = () => entries.filter((e, i) => e.pointer === i).map(e => e.data)
 
     return { get, mkSet, union, sameSet, contains, values };
 }

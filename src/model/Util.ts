@@ -99,3 +99,5 @@ export const chain = <T, R>(f: (t: T) => R): Fn<T, R> => ({
     run: f,
     then: <R2>(f2: (r: R) => R2) => chain((t: T) => f2(f(t)))
 });
+
+export const finite = (x: unknown) => Number.isFinite(x) ? x as number : undefined;

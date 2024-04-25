@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { BlockCrossings, Realization, Storyline, applyBc, mkPwCrossings, supportsMeeting } from "./Storyline";
-import { assertExhaustive, matchString, unfold, windows2 } from "./Util";
+import { assertExhaustive, finite, matchString, unfold, windows2 } from "./Util";
 import { bipartiteMis } from "./BiMis";
 import { splitmix32 } from "./Prng";
 import { DisjointSets } from "./DisjointSets";
@@ -49,6 +49,8 @@ interface Bundle {
     id: number,
     bc: [number, number, number],
     placeBefore: number[],
+    meetingL: number | undefined,
+    meetingR: number | undefined,
 }
 
 let random = splitmix32(PRNG_SEED);
@@ -388,7 +390,7 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number): B
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k });
 
     const addToBundle = (bundleId: number, cell: Cell) => {
-        if (!bundles.contains(cell.id)) { bundles.mkSet(cell.id, nilBundle); }
+        if (!bundles.contains(cell.id)) { bundles.mkSet(cell.id, { ...nilBundle, ...cellMeetings(cell) }); }
         bundles.union(bundleId, cell.id);
         return cell;
     }
@@ -401,7 +403,7 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number): B
     }
 
     cutIntoRects.filter(c => !c.tl && !c.bl).forEach(c => {
-        const bundle: Bundle = { ...nilBundle, id: c.id };
+        const bundle: Bundle = { ...nilBundle, id: c.id, ...cellMeetings(c) };
         bundles.mkSet(c.id, bundle);
         let [i, j] = [c, c];
         while (i.tr) { i = addToBundle(bundle.id, i.tr); }
@@ -420,16 +422,28 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number): B
         cellBuf[c.lineIdx] = c;
     });
 
+    bundles.values().forEach(b1 => bundles.values().forEach(b2 => {
+        if (b1.meetingR && b2.meetingL && b2.meetingL >= b1.meetingR) { place(b1.id, b2.id); }
+        else if (b2.meetingR && b1.meetingL && b1.meetingL >= b2.meetingR) { place(b2.id, b1.id); }
+    }))
+
     const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
     const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
 
     return ordered.map(id => bundles.get(id)!.bc);
 }
 
-const nilBundle: Bundle = { id: -1, bc: [-1, -1, -1], placeBefore: [] };
+const nilBundle: Bundle = { id: -1, bc: [-1, -1, -1], placeBefore: [], meetingL: undefined, meetingR: undefined };
 
-const mergeBundles = (a: Bundle, b: Bundle): Bundle =>
-    ({ ...(a.id === -1 ? b : a), placeBefore: _.union(a.placeBefore, b.placeBefore) });
+const mergeBundles = (a: Bundle, b: Bundle): Bundle => ({
+    ...(a.id === -1 ? b : a),
+    placeBefore: _.union(a.placeBefore, b.placeBefore),
+    meetingL: finite(Math.max(a.meetingL ?? -Infinity, b.meetingL ?? -Infinity)),
+    meetingR: finite(Math.min(a.meetingR ?? Infinity, b.meetingR ?? Infinity)),
+});
+
+const cellMeetings = (cell: Cell) =>
+    ({ meetingL: finite(Math.max(...cell.meetingsL)), meetingR: finite(Math.min(...cell.meetingsR)) });
 
 const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], off: number): Realization => {
     // console.debug(`initial permutation is ${init}`)
@@ -445,7 +459,7 @@ const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], of
                 perm = applyBc(perm, ...bc);
                 res.push(bc);
             } else {
-                throw new Error(`no more block crossings but meeting ${meeting} is unsupported by ${perm}`);
+                throw new Error(`no more block crossings but meeting ${meeting} (#${i + off + 1}) is unsupported by ${perm}`);
             }
         }
         return res;
