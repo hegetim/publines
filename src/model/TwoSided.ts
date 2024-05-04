@@ -89,9 +89,9 @@ const mergeRealizations = (top: Realization, bottom: Realization): Realization =
     const topSize = top.initialPermutation.length;
     // console.log({ note: 'merging sbcm realizations', flippedTop, bottom })
     return {
-        initialPermutation: [...flippedTop.initialPermutation, ...bottom.initialPermutation.slice(1)],
+        initialPermutation: [...flippedTop.initialPermutation, 0, ...bottom.initialPermutation],
         blockCrossings: _.zip(flippedTop.blockCrossings, bottom.blockCrossings)
-            .map(([top, bot]) => _.concat(top!, moveBlockCrossings(bot!, topSize - 1))),
+            .map(([top, bot]) => _.concat(top!, moveBlockCrossings(bot!, topSize))),
     };
 }
 
@@ -99,7 +99,7 @@ const flipRealization = (real: Realization): Realization => {
     const n = real.initialPermutation.length;
     return {
         initialPermutation: real.initialPermutation.toReversed(),
-        blockCrossings: real.blockCrossings.map(bcs => bcs.map(([a, b, c]) => [n - c - 1, n - b - 2, n - a - 1])),
+        blockCrossings: real.blockCrossings.map(bcs => bcs.map(([a, b, c]) => [n - c, n - b - 1, n - a])),
     };
 }
 
@@ -107,11 +107,12 @@ const moveBlockCrossings = (bcs: BlockCrossings, by: number): BlockCrossings =>
     bcs.map(([a, b, c]) => [a + by, b + by, c + by]);
 
 export const twoSidedScm = (story: Storyline): Realization => {
-    const [_, topSet, bottomSet] = maxCutGreedyEC(mkCrossingMatrix(story), story.authorIds.length)
+    if (story.meetings.length < 2) { return oneSidedScm(story); } // trivial cases
+    const [_0, topSet, bottomSet] = maxCutGreedyEC(mkCrossingMatrix(story), story.authorIds.length)
     // console.log({ note: 'the greedy cut', topSet, bottomSet })
     const [topStory, topSize, bottomStory, bottomSize] = splitStory(story, topSet, bottomSet);
     const [topReal, bottomReal] = [oneSidedScm(topStory), oneSidedScm(bottomStory)];
-    topReal.initialPermutation = topReal.initialPermutation.slice(0, topSize);
-    bottomReal.initialPermutation = bottomReal.initialPermutation.slice(0, bottomSize);
+    _.pullAll(topReal.initialPermutation, [0, ...bottomSet]);
+    _.pullAll(bottomReal.initialPermutation, [0, ...topSet]);
     return mergeRealizations(topReal, bottomReal);
 }
