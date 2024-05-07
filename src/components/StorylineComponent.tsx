@@ -38,7 +38,7 @@ export const StorylineComponent = (props: {
                     meetingMeta={props.publications.map(p => ({ title: p.title, informal: p.informal }))}
                     realization={realization} />
             </div>
-            <MetricsComponent data={realization} />
+            <MetricsComponent story={props.story} real={realization} />
         </React.Fragment>
     } catch (err) {
         console.error(err);

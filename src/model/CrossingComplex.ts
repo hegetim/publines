@@ -385,7 +385,7 @@ const select2 = (c: Corner): SimpleChord[] => {
     return [{ start: c, dir: dir1 }, { start: c, dir: dir2 }];
 };
 
-const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number): BlockCrossings => {
+const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, unordered: boolean = false): BlockCrossings => {
     const bundles = DisjointSets(mergeBundles, () => nilBundle);
     const cellBuf: (Cell | undefined)[] = Array.from({ length: k });
 
@@ -427,10 +427,13 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number): B
         else if (b2.meetingR && b1.meetingL && b1.meetingL >= b2.meetingR) { place(b2.id, b1.id); }
     }))
 
-    const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
-    const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
-
-    return ordered.map(id => bundles.get(id)!.bc);
+    if (unordered) { // DO NOT USE THIS PATH! -- ONLY FOR METRICS
+        return bundles.values().map(b => b.bc);
+    } else {
+        const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
+        const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
+        return ordered.map(id => bundles.get(id)!.bc);
+    }
 }
 
 const nilBundle: Bundle = { id: -1, bc: [-1, -1, -1], placeBefore: [], meetingL: undefined, meetingR: undefined };
@@ -508,6 +511,16 @@ const endPermutation = (realized: Realization): number[] => {
     let perm = [...realized.initialPermutation];
     realized.blockCrossings.flat().forEach(bc => perm = applyBc(perm, ...bc));
     return perm;
+}
+
+export const bundleNumber = (story: Storyline, realized: Realization): number => {
+    random = splitmix32(PRNG_SEED);
+    const cells = mkCells(story, realized);
+    const corners = mkCorners(cells);
+    const snapshot = structuredClone(cells);
+    mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
+    mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
+    return mkBlockCrossings(snapshot, cells, story.authorIds.length, true).length;
 }
 
 export const unbundle = (realization: Realization): Realization =>
