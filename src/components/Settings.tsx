@@ -42,7 +42,8 @@ export const Settings = (props: Props) => {
                 <div className="settings-setting-label">(block) crossing minimization:</div>
                 <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-algo')}
                     value={props.config.algo.realization} onChange={x => props.updateConfig(algoReal(x.target.value))}>
-                    {...mkOptions<AlgoConfig['realization']>({ '1scm': "one-sided SCM", '2scm': "two-sided SCM", 'sbcm': "greedy SBCM" })}
+                    {...mkOptions<AlgoConfig['realization']>(
+                        { '1scm': "one-sided SCM", '2scm': "two-sided SCM", 'sbcm': "greedy SBCM", 'bi-sbcm': "bidirectional SBCM" })}
                 </select>
                 <div className="settings-setting-label">crossings bundling:</div>
                 <SelectButton<AlgoConfig['bundling']> value={props.config.algo.bundling}

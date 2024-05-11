@@ -268,13 +268,11 @@ function adaptPermutation(pair: PairInfo, p: number[], G: Group[], _A: number[][
     return [newP, bc];
 }
 
-export const greedySbcm = (storyline: Storyline, lookahead: number): Realization => {
-    const meetings = storyline.meetings;
+export const greedySbcmStep = (story: Storyline, lookahead: number, init: number[]): [Realization, number[]] => {
+    const meetings = story.meetings;
     const blockCrossings: BlockCrossings[] = [[]]; // first meeting always fits
-    const allAuthors = Array.from({ length: Math.max(...meetings.flat()) + 1 }, (_, i) => i);
-    const initialPermutation: number[] = heuristicPermutation(allAuthors, meetings, lookahead);
-    let currentPermutation = initialPermutation;
 
+    let currentPermutation = init;
     let firstMeetingInPermutation: boolean = true;
     let i: number = 0;
 
@@ -290,7 +288,7 @@ export const greedySbcm = (storyline: Storyline, lookahead: number): Realization
                     blockCrossings.push([]);
                 }
                 if (i == meetings.length - 1) {
-                    return { initialPermutation, blockCrossings };
+                    return [{ initialPermutation: init, blockCrossings }, currentPermutation];
                 }
                 firstMeetingInPermutation = false;
                 i++;
@@ -313,5 +311,12 @@ export const greedySbcm = (storyline: Storyline, lookahead: number): Realization
         }
         blockCrossings.push(newBcs);
     }
-    return { initialPermutation, blockCrossings };
+    return [{ initialPermutation: init, blockCrossings }, currentPermutation];
+}
+
+export const greedySbcm = (storyline: Storyline, lookahead: number): Realization => {
+    const meetings = storyline.meetings;
+    const allAuthors = Array.from({ length: Math.max(...meetings.flat()) + 1 }, (_, i) => i);
+    const initialPermutation: number[] = heuristicPermutation(allAuthors, meetings, lookahead);
+    return greedySbcmStep(storyline, lookahead, initialPermutation)[0];
 }

@@ -37,7 +37,7 @@ const mostFrequentKeys = <K, T>(map: Map<K, [T, number]>, limit: number) => {
     else { return _.sortBy([...map], ([_0, [_1, n]]) => -n).slice(0, limit).map(t => t[0]); }
 };
 
-export type BlockCrossings = [number, number, number][];
+export type BlockCrossings = (readonly [number, number, number])[];
 
 export interface Realization {
     initialPermutation: number[],

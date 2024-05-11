@@ -14,6 +14,7 @@ import { AlgoConfig, UserConfig, mkDrawingConfig } from "../model/UserConfig"
 import { chain, matchString } from "../model/Util"
 import { greedySbcm } from "../model/GreedySbcm"
 import { mkBundles, unbundle } from "../model/CrossingComplex"
+import { biSbcm } from "../model/BiSbcm"
 
 export const StorylineComponent = (props: {
     config: UserConfig,
@@ -84,6 +85,7 @@ const mkRealization = (config: AlgoConfig) => (story: Storyline) => matchString(
     '1scm': () => oneSidedScm(story),
     '2scm': () => twoSidedScm(story),
     'sbcm': () => greedySbcm(story, Math.max(6, story.authorIds.length / 2)),
+    'bi-sbcm': () => biSbcm(story),
 });
 
 const mkBundling = (config: AlgoConfig, story: Storyline) => (real: Realization) => matchString(config.bundling, {

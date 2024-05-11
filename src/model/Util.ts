@@ -23,7 +23,7 @@ export function* windows<T>(array: T[], size: number) {
 
 export function* windows2<T>(array: T[]) {
     for (let i = 0; i + 2 <= array.length; i++) {
-        yield [array[i], array[i + 1]] as [T, T];
+        yield [array[i], array[i + 1]] as readonly [T, T];
     }
 }
 
@@ -101,3 +101,10 @@ export const chain = <T, R>(f: (t: T) => R): Fn<T, R> => ({
 });
 
 export const finite = (x: unknown) => Number.isFinite(x) ? x as number : undefined;
+
+export const shuffle = <T>(ts: T[], random: () => number) => _.range(ts.length - 1, 0, -1).forEach(i => {
+    const j = Math.floor(random() * (i + 1));
+    const tmp = ts[i]!;
+    ts[i] = ts[j]!;
+    ts[j] = tmp;
+});

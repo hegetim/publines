@@ -14,7 +14,7 @@ export interface MeetingSect {
 
 export interface BlockCrossingSect {
     kind: 'block-crossing'
-    bc: [number, number, number],
+    bc: readonly [number, number, number],
     perm: number[],
 }
 
@@ -38,9 +38,9 @@ export const mkSections = (story: Storyline, realization: Realization, publ: Pub
                 perm = applyBc(perm, ...bc);
             });
         }
-        const supported = supportsMeeting(perm, meeting)
+        const supported = supportsMeeting(perm, meeting);
         if (!supported) { throw new Error(`meeting ${meeting} (#${ordinal + 1}) is unsupported by <${perm}>`); }
-        const meta = publ[ordinal]!
+        const meta = publ[ordinal]!;
         result.push({ kind: 'meeting', ordinal, xTickLabel: meta.year.toString(), ...supported });
     });
     return result;
