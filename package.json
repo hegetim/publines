@@ -2,14 +2,13 @@
   "name": "publines",
   "version": "0.1.0",
   "description": "Visualize publication history of scientific authors",
-  "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --config webpack.production.js",
     "start": "webpack serve --config webpack.development.js"
   },
   "author": "Tim Hegemann",
-  "license": "ISC",
+  "license": "AGPL-3.0-or-later",
   "dependencies": {
     "@fortawesome/free-solid-svg-icons": "^6.5.1",
     "@fortawesome/react-fontawesome": "^0.2.0",

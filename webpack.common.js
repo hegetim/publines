@@ -3,11 +3,15 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = {
-  entry: './src/index.tsx',
+  entry: {
+    main: './src/index.tsx',
+    experiments: './src/experiments.ts',
+  },
   plugins: [
     new HtmlWebpackPlugin({
       template: 'src/static/index.html',
       favicon: 'src/static/favicon.ico',
+      chunks: ['main'],
     }),
     new MiniCssExtractPlugin(),
   ],
@@ -36,7 +40,7 @@ module.exports = {
     extensions: ['.tsx', '.ts', '.js', '.html', '.ico'],
   },
   output: {
-    filename: 'bundle.js',
+    filename: '[name].js',
     path: path.resolve(__dirname, 'build'),
     clean: true,
   },
