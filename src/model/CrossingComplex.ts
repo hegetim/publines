@@ -118,11 +118,11 @@ const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number }
     const allTR = (c: Cell): Cell[] => [...unfold(c, c => c.tr)];
     const allBR = (c: Cell): Cell[] => [...unfold(c, c => c.br)];
 
-    const doHop2 = (hop1: Cell, cs: Cell[], afterStart: number[]) => cs.forEach(hop2 =>
+    const doHop2 = (hop1: Cell, cs: Cell[], afterStart: number[], hint: string) => cs.forEach(hop2 =>
         allBefore(hop2).forEach(end => end.meetingsL.forEach(m2 =>
             afterStart.filter(m => m <= m2).forEach(m1 => {
                 console.debug(`conflicting meetings detected: ${1 + m1 + off} vs. ${1 + m2 + off}`)
-                console.debug(`critical path from ${hop1.id} to ${hop2.id}`)
+                console.debug(`critical path from ${hop1.id} to ${hop2.id} (via ${hint} path ${cs.map(x => x.lineIdx)})`)
                 throw { conflictAt: m1 };
             }))));
 
@@ -130,8 +130,8 @@ const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number }
         cells.forEach(cell => {
             const afterStart = cell.meetingsR.sort((a, b) => b - a); // sort descending
             allBefore(cell).forEach(hop1 => {
-                doHop2(hop1, allTR(hop1), afterStart);
-                doHop2(hop1, allBR(hop1), afterStart);
+                doHop2(hop1, allTR(hop1), afterStart, 'top');
+                doHop2(hop1, allBR(hop1), afterStart, 'bottom');
             })
         });
         return false;
@@ -489,7 +489,7 @@ export const mkBundles = (story: Storyline, realized: Realization, off: number =
 }
 
 const splitAt = (story: Storyline, realized: Realization, atExcl: number, off: number): Realization => {
-    console.debug(`splitting at ${atExcl + off + 1}`);
+    console.debug(`splitting before ${atExcl + off + 1}`);
     const storyA: Storyline = { ...story, meetings: story.meetings.slice(0, atExcl) };
     const storyB: Storyline = { ...story, meetings: story.meetings.slice(atExcl) };
     const realA: Realization = { ...realized, blockCrossings: realized.blockCrossings.slice(0, atExcl) };
