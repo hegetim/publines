@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faChevronRight, faToggleOff, faToggleOn } from "@fortawesome/free-solid-svg-icons";
 import { TupleToUnion, cls, matchString } from "../model/Util";
 import { ExcludeInformal, excludeInformalOpts } from "../model/Metadata";
-import { DrawingConfig, MeetingStyle, enumerationStyles } from "../model/StorylineDrawings";
+import { DrawingConfig, MeetingStyle, enumerationStyles } from "./StorylineDrawings";
 import { SelectButton } from "./SelectButton";
 
 export const Settings = (props: Props) => {

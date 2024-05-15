@@ -1,6 +1,7 @@
 import _ from "lodash";
 import { Author, BibMeta, Publication } from "./Metadata";
-import { as, matchByKind, matchString } from "./Util";
+import { as, matchString } from "./Util";
+import { parseXml } from "./XmlUtils";
 
 interface DblpAuthorSearch {
     result: {
@@ -75,7 +76,7 @@ export const loadPublications = async (id: string) => {
 };
 
 export const parsePublications = (raw: string) => {
-    const doc = new DOMParser().parseFromString(raw, 'application/xml');
+    const doc = parseXml(raw);
     const maybeError = doc.querySelector('parsererror');
     if (maybeError) {
         console.warn(maybeError.textContent);

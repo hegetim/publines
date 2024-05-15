@@ -1,6 +1,7 @@
 import _ from "lodash";
-import { MeetingSect, Section } from "./Sections";
-import { TupleToUnion, as, assertExhaustive, calcTextSize, matchByKind, matchString } from "./Util";
+import { MeetingSect, Section } from "../model/Sections";
+import { TupleToUnion, as, assertExhaustive, matchByKind, matchString } from "../model/Util";
+import { calcTextSize } from "./DomUtils";
 
 export interface DrawingConfig {
     lineDist: number,

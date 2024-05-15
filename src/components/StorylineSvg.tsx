@@ -1,6 +1,6 @@
 import React, { useEffect } from "react"
 import _ from "lodash";
-import { DrawingConfig, DrawingResult, ProtoLabel, bbox2viewBox } from "../model/StorylineDrawings"
+import { DrawingConfig, DrawingResult, ProtoLabel, bbox2viewBox } from "./StorylineDrawings"
 import { matchByKind, matchString } from "../model/Util";
 import { selectColor } from "./StorylineComponent";
 

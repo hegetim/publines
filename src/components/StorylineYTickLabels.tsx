@@ -1,6 +1,6 @@
 import React from "react";
-import { calcTextSize } from "../model/Util";
-import { BBox, bbox2viewBox } from "../model/StorylineDrawings";
+import { calcTextSize } from "./DomUtils";
+import { BBox, bbox2viewBox } from "./StorylineDrawings";
 
 export const StorylineYTickLabels = (props: {
     labels: string[],

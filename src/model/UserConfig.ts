@@ -1,4 +1,4 @@
-import { DrawingConfig, MeetingStyle, Stretch } from "./StorylineDrawings";
+import { DrawingConfig, MeetingStyle, Stretch } from "../components/StorylineDrawings";
 import { ExcludeInformal } from "./Metadata";
 import { TupleToUnion, matchString } from "./Util";
 import base64js from "base64-js";
