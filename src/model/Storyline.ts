@@ -12,13 +12,7 @@ export const mkStoryline = (
     protagonist: Author,
     limit: number | false,
 ): [Storyline, Map<string, Author>] => {
-    let authors: Map<string, [Author, number]> = new Map();
-    publications.flatMap(p => p.authors).forEach(contributor => {
-        const tmp = authors.get(contributor.id);
-        if (tmp) { authors.set(contributor.id, [tmp[0], tmp[1] + 1]); }
-        else { authors.set(contributor.id, [contributor, 1]); }
-    });
-    authors.delete(protagonist.id);
+    const authors = countCoauthors(publications, protagonist.id);
     const orderedAuthors = [protagonist.id, ...(mostFrequentKeys(authors, limit || -1))];
     let meetings: number[][] = [];
     for (const publ of publications) {
@@ -32,7 +26,18 @@ export const mkStoryline = (
     return [{ authorIds: orderedAuthors, meetings }, allAuthors];
 };
 
-const mostFrequentKeys = <K, T>(map: Map<K, [T, number]>, limit: number) => {
+export const countCoauthors = (publications: Publication[], protagonist: string) => {
+    const authors: Map<string, readonly [Author, number]> = new Map();
+    publications.flatMap(p => p.authors).forEach(contributor => {
+        const tmp = authors.get(contributor.id);
+        if (tmp) { authors.set(contributor.id, [tmp[0], tmp[1] + 1]); }
+        else { authors.set(contributor.id, [contributor, 1]); }
+    });
+    authors.delete(protagonist);
+    return authors;
+}
+
+export const mostFrequentKeys = <K, T>(map: Map<K, readonly [T, number]>, limit: number) => {
     if (limit < 0) { return [...map.keys()]; }
     else { return _.sortBy([...map], ([_0, [_1, n]]) => -n).slice(0, limit).map(t => t[0]); }
 };

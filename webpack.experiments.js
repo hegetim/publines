@@ -10,5 +10,5 @@ module.exports = merge(common, {
         new webpack.NormalModuleReplacementPlugin(/model\/XmlUtils\.ts/, './NodeXmlUtils.ts')
     ],
     target: 'node',
-    mode: 'production'
+    mode: 'development'
 });

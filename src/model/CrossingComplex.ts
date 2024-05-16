@@ -121,8 +121,8 @@ const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number }
     const doHop2 = (hop1: Cell, cs: Cell[], afterStart: number[], hint: string) => cs.forEach(hop2 =>
         allBefore(hop2).forEach(end => end.meetingsL.forEach(m2 =>
             afterStart.filter(m => m <= m2).forEach(m1 => {
-                console.debug(`conflicting meetings detected: ${1 + m1 + off} vs. ${1 + m2 + off}`)
-                console.debug(`critical path from ${hop1.id} to ${hop2.id} (via ${hint} path ${cs.map(x => x.lineIdx)})`)
+                // console.debug(`conflicting meetings detected: ${1 + m1 + off} vs. ${1 + m2 + off}`)
+                // console.debug(`critical path from ${hop1.id} to ${hop2.id} (via ${hint} path ${cs.map(x => x.lineIdx)})`)
                 throw { conflictAt: m1 };
             }))));
 
@@ -484,12 +484,12 @@ export const mkBundles = (story: Storyline, realized: Realization, off: number =
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     const bcs = mkBlockCrossings(snapshot, cells, story.authorIds.length);
-    console.debug({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcs), story, cells })
+    // console.debug({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcs), story, cells })
     return mkRealization(story, structuredClone(bcs), realized.initialPermutation, off);
 }
 
 const splitAt = (story: Storyline, realized: Realization, atExcl: number, off: number): Realization => {
-    console.debug(`splitting before ${atExcl + off + 1}`);
+    // console.debug(`splitting before ${atExcl + off + 1}`);
     const storyA: Storyline = { ...story, meetings: story.meetings.slice(0, atExcl) };
     const storyB: Storyline = { ...story, meetings: story.meetings.slice(atExcl) };
     const realA: Realization = { ...realized, blockCrossings: realized.blockCrossings.slice(0, atExcl) };

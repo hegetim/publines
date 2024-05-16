@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { matchString, TupleToUnion } from "./Util";
+import { chain, matchString, TupleToUnion } from "./Util";
 
 export interface Author {
     name: string,
@@ -51,3 +51,12 @@ export const filterInformal = (publ: Publication[], conf: ExcludeInformal): Publ
     }
 });
 
+export type YearFilter = false | { fromIncl: number, toIncl: number };
+
+export const filterByYear = (publ: Publication[], filter: YearFilter): Publication[] => {
+    if (filter === false) { return publ; }
+    else { return publ.filter(p => p.year >= filter.fromIncl && p.year <= filter.toIncl); }
+}
+
+export const mkFilter = (informal: ExcludeInformal, year: YearFilter): (ps: Publication[]) => Publication[] =>
+    chain((ps: Publication[]) => filterInformal(ps, informal)).then(ps => filterByYear(ps, year)).run;

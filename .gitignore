@@ -27,3 +27,6 @@ yarn-error.log*
 
 # IDEs
 .vscode
+
+# experiments
+publications.json
