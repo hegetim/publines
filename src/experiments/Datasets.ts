@@ -30,7 +30,7 @@ const storyline = (ps: Publication[], p: string, limit: number) =>
 
 const checkLimit = (story: Storyline, limit: number) => story.authorIds.length === limit + 1;
 
-export const kBatches = [10, 15, 20];
+export const kBatches = [5, 10, 15, 20];
 
 export const setupStorylines = (p: string, ps: Publication[]) => {
     const result: Storyline[] = [];

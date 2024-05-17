@@ -7,23 +7,23 @@ import { twoSidedScm } from "../model/TwoSided";
 
 export interface Contender {
     readonly run: (s: Storyline) => Realization,
-    desciption: string,
+    description: string,
 }
 
 const withBundling = (c: Contender): Contender => ({
     run: (s: Storyline) => mkBundles(s, c.run(s)),
-    desciption: `${c.desciption}+bundling`,
+    description: `${c.description}+bundling`,
 });
 
 export const oneSidedWithBundling: Contender =
-    withBundling({ run: (s: Storyline) => oneSidedScm(s), desciption: "osScm" });
+    withBundling({ run: (s: Storyline) => oneSidedScm(s), description: "osScm" });
 export const twoSidedWithBundling: Contender =
-    withBundling({ run: (s: Storyline) => twoSidedScm(s), desciption: "tsScm" });
+    withBundling({ run: (s: Storyline) => twoSidedScm(s), description: "tsScm" });
 export const oldGreedySbcm: Contender =
-    { run: (s: Storyline) => greedySbcm(s, Math.max(6, s.authorIds.length / 2)), desciption: "oldGreedySbcm" };
+    { run: (s: Storyline) => greedySbcm(s, Math.max(6, s.authorIds.length / 2)), description: "oldGreedySbcm" };
 export const oldGreedySbcmWithBundling = withBundling(oldGreedySbcm);
 export const bidirectionalSbcm: Contender =
-    { run: (s: Storyline) => biSbcm(s), desciption: "bidiSbcm" };
+    { run: (s: Storyline) => biSbcm(s), description: "bidiSbcm" };
 export const bidirectionalSbcmWithBundling = withBundling(bidirectionalSbcm);
 // todo barycenterScmWithBundling
 
@@ -31,7 +31,7 @@ export const contenders: Contender[] = [
     oneSidedWithBundling,
     twoSidedWithBundling,
     oldGreedySbcm,
-    oldGreedySbcmWithBundling,
+    // oldGreedySbcmWithBundling,
     bidirectionalSbcm,
-    bidirectionalSbcmWithBundling,
+    // bidirectionalSbcmWithBundling,
 ]

@@ -10,5 +10,10 @@ module.exports = merge(common, {
         new webpack.NormalModuleReplacementPlugin(/model\/XmlUtils\.ts/, './NodeXmlUtils.ts')
     ],
     target: 'node',
-    mode: 'development'
+    mode: 'production',
+    externals: {
+        bufferutil: "bufferutil",
+        "utf-8-validate": "utf-8-validate",
+        canvas: "canvas",
+    }
 });
