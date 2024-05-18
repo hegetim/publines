@@ -29,3 +29,7 @@
 .select-button-selected {
     background-color: #ccc;
 }
+
+.numeric-input-invalid {
+    color: #e31a1c;
+}

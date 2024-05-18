@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import _ from "lodash";
 import * as O from 'optics-ts/standalone';
 import './Settings.css';
 import { AlgoConfig, DataConfig, StyleConfig, UserConfig, dataSources, realizationAlgos } from "../model/UserConfig";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faChevronRight, faToggleOff, faToggleOn } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { TupleToUnion, cls, matchString } from "../model/Util";
-import { ExcludeInformal, excludeInformalOpts } from "../model/Metadata";
+import { excludeInformalOpts } from "../model/Metadata";
 import { DrawingConfig, MeetingStyle, enumerationStyles } from "./StorylineDrawings";
-import { SelectButton } from "./SelectButton";
+import { BinarySelect, NumericInput, OptionalNumericInput, OptionalSelectInput, SelectButton, SelectInput } from "./InputWidgets";
 
-export const Settings = (props: Props) => {
+export const Settings = (props: { config: UserConfig, updateConfig: (f: (c: UserConfig) => UserConfig) => void }) => {
     const [isCollapsed, setCollapsed] = useState(true);
 
     return <div className="settings-outer-container">
@@ -22,29 +22,27 @@ export const Settings = (props: Props) => {
             <div className="settings-inner-header">Data Source</div>
             <div className="settings-inner-par">
                 <div className="settings-setting-label">data provider:</div>
-                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-provider')}
-                    value={props.config.data.source} onChange={x => props.updateConfig(dataSource(x.target.value))}>
-                    {...mkOptions<DataConfig['source']>({ 'dblp': "dblp.org", 'playground': "playground" })}
-                </select>
+                <SelectInput<DataConfig['source']> classNames={['settings-select-provider']}
+                    handle={src => props.updateConfig(dataSource(src))} value={props.config.data.source}
+                    sanitize={sanitize(dataSources, props.config.data.source)}
+                    options={{ dblp: "dblp.org", playground: "playground" }} />
                 <div className="settings-setting-label">exclude informal publications:</div>
-                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-informal')}
-                    value={props.config.data.excludeInformal} onChange={x => props.updateConfig(excludeInformal(x.target.value))}>
-                    {...mkOptions<ExcludeInformal>({
-                        'all': "exclude all",
-                        'repeated': "exclude repeated titles",
-                        'none': "show all"
-                    })}
-                </select>
-                <CoauthorCapWidget {...props} />
+                <SelectInput<DataConfig['excludeInformal']> classNames={['settings-select-informal']}
+                    value={props.config.data.excludeInformal} handle={x => props.updateConfig(excludeInformal(x))}
+                    sanitize={sanitize(excludeInformalOpts, props.config.data.excludeInformal)}
+                    options={{ all: "exclude all", repeated: "exclude repeated titles", none: "show all" }} />
+                <OptionalNumericInput classNames={['settings-setting-oneline', 'settings-input-container']} default={10}
+                    value={props.config.data.coauthorCap || undefined} isValid={n => isFinite(n) && n > 0}
+                    setValue={n => props.updateConfig(coauthorCap(n ?? false))}
+                    labels={{ infix: "show only top", suffix: "coauthors" }} />
             </div>
             <div className="settings-inner-header">Algorithms</div>
             <div className="settings-inner-par">
                 <div className="settings-setting-label">(block) crossing minimization:</div>
-                <select {...cls('settings-setting-input', 'settings-input-container', 'settings-select-algo')}
-                    value={props.config.algo.realization} onChange={x => props.updateConfig(algoReal(x.target.value))}>
-                    {...mkOptions<AlgoConfig['realization']>(
-                        { '1scm': "one-sided SCM", '2scm': "two-sided SCM", 'sbcm': "greedy SBCM", 'bi-sbcm': "bidirectional SBCM" })}
-                </select>
+                <SelectInput<AlgoConfig['realization']> classNames={['settings-select-algo']}
+                    value={props.config.algo.realization} handle={r => props.updateConfig(algoReal(r))}
+                    sanitize={sanitize(realizationAlgos, props.config.algo.realization)}
+                    options={{ '1scm': "one-sided SCM", '2scm': "two-sided SCM", sbcm: "greedy SBCM", 'bi-sbcm': "bidirectional SBCM" }} />
                 <div className="settings-setting-label">crossings bundling:</div>
                 <SelectButton<AlgoConfig['bundling']> value={props.config.algo.bundling}
                     setValue={key => props.updateConfig(algoBundle(key))} additionalClassNames={['settings-input-container']}
@@ -53,11 +51,8 @@ export const Settings = (props: Props) => {
             <div className="settings-inner-header">Visuals</div>
             <div className="settings-inner-par">
                 <div className="settings-setting-label">distance between author lines:</div>
-                <div className="settings-input-container">
-                    <input {...cls('settings-setting-input', 'settings-input-cap')} type="number" min={1}
-                        value={props.config.style.lineDistance} onChange={ev => props.updateConfig(lineDist(ev.target.value))} />
-                    <span className="settings-setting-label">px</span>
-                </div>
+                <NumericInput classNames={["settings-input-container"]} value={props.config.style.lineDistance}
+                    isValid={n => isFinite(n) && n > 4} setValue={d => props.updateConfig(lineDist(d))} unitString="px" />
                 <div className="settings-setting-label">author line thickness:</div>
                 <SelectButton<StyleConfig['authorLineThickness']> value={props.config.style.authorLineThickness}
                     setValue={key => props.updateConfig(lineThickness(key))} additionalClassNames={['settings-input-container']}
@@ -66,123 +61,35 @@ export const Settings = (props: Props) => {
                 <SelectButton<StyleConfig['stretch']> value={props.config.style.stretch}
                     setValue={key => props.updateConfig(stretch(key))} additionalClassNames={['settings-input-container']}
                     labels={{ condensed: "condensed", normal: "normal", expanded: "expanded" }} />
-                <ToggleMeetingStyleWidget {...props} />
-                <ToggleXAxisPosWidget {...props} />
-                <EnumerationStyleWidget {...props} />
+                <div className="settings-setting-label">draw meetings as:</div>
+                <BinarySelect<StyleConfig['meetingStyle']> toggle={() => props.updateConfig(toggleMeetingStyle)}
+                    classNames={['settings-input-container']} value={props.config.style.meetingStyle}
+                    options={{ left: ['metro', "metro station"], right: ['bar', "vertical bar"] }} />
+                <div className="settings-setting-label">place x-axis at:</div>
+                <BinarySelect<StyleConfig['xAxisPosition']> classNames={['settings-input-container']}
+                    toggle={() => props.updateConfig(toggleXAxisPos)} value={props.config.style.xAxisPosition}
+                    options={{ left: ['top', "top"], right: ['bottom', "bottom"] }} />
+                <OptionalSelectInput<TupleToUnion<typeof enumerationStyles>> classNames={['settings-setting-oneline']}
+                    default='x' value={props.config.style.enumerationStyle} setValue={s => props.updateConfig(enumStyle(s))}
+                    sanitize={sanitize(enumerationStyles, 'x')} labels={{ infix: "enumerate publications as" }}
+                    options={{ 'x': "plain numbers", '[x]': "numbers with brackets", 'x.': "numbers followed by a period" }} />
             </div>
         </div>
     </div>;
 }
 
-const CoauthorCapWidget = (props: Props) => {
-    const [capShadow, setCapShadow] = useState(props.config.data.coauthorCap || 10);
+const dataSource: (src: DataConfig['source']) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'source'));
 
-    useEffect(() => {
-        if (props.config.data.coauthorCap !== false) { setCapShadow(props.config.data.coauthorCap) }
-    }, [props.config.data.coauthorCap]);
-
-    const toggleDisable = () => {
-        const isDisabled = props.config.data.coauthorCap === false;
-        props.updateConfig(coauthorCap(isDisabled ? capShadow : false));
-    }
-
-    const handleNumberChange = (ev: React.ChangeEvent<HTMLInputElement>) => {
-        const number = parsePositiveOrElse(ev.target.value, capShadow);
-        setCapShadow(number);
-        props.updateConfig(coauthorCap(number));
-    }
-
-    return <div className="settings-setting-oneline">
-        <span className="click-me" onClick={toggleDisable}>
-            <FontAwesomeIcon className="settings-setting-input"
-                icon={props.config.data.coauthorCap === false ? faToggleOff : faToggleOn} />
-            <span className="settings-setting-label">show only top</span>
-        </span>
-        <input {...cls('settings-setting-input', 'settings-input-cap')} type="number" min={1}
-            value={capShadow} onChange={handleNumberChange} disabled={props.config.data.coauthorCap === false} />
-        <span className="settings-setting-label">coauthors</span>
-    </div>;
-}
-
-const ToggleMeetingStyleWidget = (props: Props) => {
-    const selectRight = matchString(props.config.style.meetingStyle, { 'metro': () => false, 'bar': () => true });
-    return <React.Fragment>
-        <div className="settings-setting-label">draw meetings as:</div>
-        <div onClick={() => props.updateConfig(toggleMeetingStyle)} {...cls('click-me', 'settings-input-container')}>
-            <span className="settings-setting-label">metro station</span>
-            <FontAwesomeIcon className="settings-setting-input" icon={faToggleOff} {...(selectRight ? { flip: 'horizontal' } : {})} />
-            <span className="settings-setting-label">vertical bar</span>
-        </div>
-    </React.Fragment>;
-}
-
-const ToggleXAxisPosWidget = (props: Props) => {
-    const selectRight = matchString(props.config.style.xAxisPosition, { 'top': () => false, 'bottom': () => true });
-    return <React.Fragment>
-        <div className="settings-setting-label">place x-axis at:</div>
-        <div onClick={() => props.updateConfig(toggleXAxisPos)} {...cls('click-me', 'settings-input-container')}>
-            <span className="settings-setting-label">top</span>
-            <FontAwesomeIcon className="settings-setting-input" icon={faToggleOff} {...(selectRight ? { flip: 'horizontal' } : {})} />
-            <span className="settings-setting-label">bottom</span>
-        </div>
-    </React.Fragment>;
-}
-
-const EnumerationStyleWidget = (props: Props) => {
-    const [styleShadow, setStyleShadow] = useState(props.config.style.enumerationStyle ?? 'x');
-
-    useEffect(() => {
-        if (props.config.style.enumerationStyle) { setStyleShadow(props.config.style.enumerationStyle); }
-    }, [props.config.style.enumerationStyle]);
-
-    const toggleDisable = () => {
-        const isDisabled = props.config.style.enumerationStyle === undefined;
-        props.updateConfig(enumStyle(isDisabled ? styleShadow : undefined));
-    }
-
-    const handleSelectionChange = (ev: React.ChangeEvent<HTMLSelectElement>) => {
-        const selected = sanitize(ev.target.value, enumerationStyles, styleShadow);
-        setStyleShadow(selected);
-        props.updateConfig(enumStyle(selected));
-    }
-
-    return <div className="settings-setting-oneline">
-        <span className="click-me" onClick={toggleDisable}>
-            <FontAwesomeIcon className="settings-setting-input"
-                icon={props.config.style.enumerationStyle ? faToggleOn : faToggleOff} />
-            <span className="settings-setting-label">enumerate publications as</span>
-        </span>
-        <select {...cls('settings-setting-input', 'settings-input-enum')}
-            value={styleShadow} onChange={handleSelectionChange} disabled={props.config.style.enumerationStyle === undefined}>
-            {...mkOptions<TupleToUnion<typeof enumerationStyles>>({
-                'x': "plain numbers",
-                '[x]': "numbers with brackets",
-                'x.': "numbers followed by a period"
-            })}
-        </select>
-    </div>;
-}
-
-const parsePositiveOrElse = (raw: string, orElse: number) => {
-    const res = parseInt(raw);
-    return res > 0 ? res : orElse;
-}
-
-const dataSource = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('data', 'source'), sanitize(raw, dataSources, c.data.source), c);
-
-const excludeInformal = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('data', 'excludeInformal'), sanitize(raw, excludeInformalOpts, c.data.excludeInformal), c);
+const excludeInformal: (exc: DataConfig['excludeInformal']) => (c: UserConfig) => UserConfig =
+    O.set(O.compose('data', 'excludeInformal'));
 
 const coauthorCap: (v: number | false) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'coauthorCap'));
 
-const algoReal = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('algo', 'realization'), sanitize(raw, realizationAlgos, c.algo.realization), c);
+const algoReal: (r: AlgoConfig['realization']) => (c: UserConfig) => UserConfig = O.set(O.compose('algo', 'realization'));
 
 const algoBundle: (key: AlgoConfig['bundling']) => (c: UserConfig) => UserConfig = O.set(O.compose('algo', 'bundling'));
 
-const lineDist = (raw: string) => (c: UserConfig) =>
-    O.set(O.compose('style', 'lineDistance'), parsePositiveOrElse(raw, c.style.lineDistance), c);
+const lineDist: (d: number) => (c: UserConfig) => UserConfig = O.set(O.compose('style', 'lineDistance'));
 
 const lineThickness: (key: StyleConfig['authorLineThickness']) => (c: UserConfig) => UserConfig =
     O.set(O.compose('style', 'authorLineThickness'));
@@ -200,13 +107,8 @@ const toggleXAxisPos: (c: UserConfig) => UserConfig = O.modify(O.compose('style'
 const enumStyle: (v: DrawingConfig['enumerateMeetings']) => (c: UserConfig) => UserConfig =
     O.set(O.compose('style', 'enumerationStyle'));
 
-const sanitize = <T extends readonly string[]>(value: string, options: T, orElse: TupleToUnion<T>): TupleToUnion<T> =>
-    options.includes(value) ? value as TupleToUnion<T> : orElse;
-
-const mkOptions = <K extends string>(body: { [P in K]: string }) =>
-    Object.entries<string>(body).map(([value, text]) => <option key={value} value={value}>{text}</option>);
+const sanitize = <T extends readonly string[]>(options: T, orElse: TupleToUnion<T>): (v: string) => TupleToUnion<T> =>
+    (value: string) => options.includes(value) ? value as TupleToUnion<T> : orElse;
 
 interface Props {
-    config: UserConfig,
-    updateConfig: (f: (c: UserConfig) => UserConfig) => void,
 }

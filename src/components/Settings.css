@@ -37,11 +37,6 @@
     }
 }
 
-input.settings-setting-input {
-    display: inline-block;
-    width: 60px;
-}
-
 .settings-setting-oneline svg {
     margin-right: 0.5ex;
 }
@@ -59,7 +54,14 @@ input.settings-setting-input {
 }
 
 .settings-input-container input {
+    display: inline-block;
+    width: 60px;
     margin-right: 0.25ex;
+}
+
+.settings-input-container .inner-numeric-input {
+    display: inline-block;
+    margin: 0 0.5ex;
 }
 
 .settings-select-provider,

@@ -5,7 +5,7 @@ import { Author } from "../model/Metadata";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencil, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { assertExhaustive, cls } from "../model/Util";
-import { Loading } from "./Commons";
+import { Loading } from "./Loading";
 
 type FetchedAuthors = [string, Author][] | 'error' | 'init' | 'loading';
 

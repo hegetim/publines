@@ -10,7 +10,7 @@ import { Settings } from './Settings';
 import { mkStoryline } from '../model/Storyline';
 import { Playground, PlaygroundData, fakeMainAuthor, fakePublications, fromStoryline } from './Playground';
 import { Bibliography } from './Bibliography';
-import { Loading } from './Commons';
+import { Loading } from './Loading';
 
 const App = () => {
     const [config, setConfig] = useState(Conf.configDefaults);
