@@ -70,6 +70,11 @@ const App = () => {
                 setMainAuthor={handleAuthorChanged} />
             : <PublicationsComponent publications={fakePublications(playgroundData)} mainAuthor={fakeMainAuthor}
                 config={config} setMainAuthor={handleAuthorChanged} />}
+        <span className='main-page-imprint'>
+            <a href='https://www.uni-wuerzburg.de/en/sonstiges/imprint-privacy-policy/'>Imprint + Privacy Policy</a>
+            <span>•</span>
+            <a href='https://www.uni-wuerzburg.de/en/sonstiges/privacy-disclaimer/'>Privacy Disclaimer</a>
+        </span>
     </div>;
 }
 

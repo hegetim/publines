@@ -46,3 +46,24 @@ p.intro-par {
 .click-me {
     cursor: pointer;
 }
+
+.main-page-imprint {
+    position: sticky;
+    bottom: 0px;
+    grid-column: 2;
+    display: flex;
+    justify-content: center;
+    gap: 1ex;
+    background-color: white;
+    color: #808080;
+    font-size: smaller;
+    padding: 0.5ex 0;
+}
+
+.main-page-imprint a {
+    color: #808080;
+}
+
+.main-page-imprint span {
+    cursor: default;
+}
