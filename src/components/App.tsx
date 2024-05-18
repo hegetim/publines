@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import _ from 'lodash';
 import * as Dblp from '../model/Dblp';
-import { Author, Publication, filterInformal } from '../model/Metadata';
+import { Author, Publication, YearFilter, mkFilter } from '../model/Metadata';
 import { MainAuthor } from './MainAuthor';
 import { StorylineComponent } from './StorylineComponent';
 import * as Conf from '../model/UserConfig';
@@ -102,9 +102,15 @@ const PublicationsComponent = (props: {
 }
 
 const handlePublications = (publications: Publication[], mainAuthor: Author, config: Conf.UserConfig) => {
-    const filtered = filterInformal(publications, config.data.excludeInformal);
+    const filtered = mkFilter(config.data.excludeInformal, mkYearFilter(config.data.excludeOld))(publications);
     const [story, authors] = mkStoryline(filtered, mainAuthor, config.data.coauthorCap);
     return { filtered, story, authors };
+}
+
+const mkYearFilter = (excludeOld: Conf.DataConfig['excludeOld']): YearFilter => {
+    if (excludeOld === false) { return false; }
+    const currentYear = new Date().getFullYear();
+    return { fromIncl: currentYear - excludeOld, toIncl: currentYear };
 }
 
 const fetchAuthors = (s: string) => Dblp.findAuthor(s)

@@ -21,6 +21,7 @@ export interface StyleConfig {
 export interface DataConfig {
     source: TupleToUnion<typeof dataSources>,
     excludeInformal: ExcludeInformal,
+    excludeOld: number | false,
     coauthorCap: number | false,
 }
 
@@ -65,7 +66,7 @@ export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
 
 export const configDefaults: UserConfig = {
     algo: { realization: '2scm', bundling: 'bundle' },
-    data: { source: 'dblp', excludeInformal: 'repeated', coauthorCap: 10 },
+    data: { source: 'dblp', excludeInformal: 'repeated', excludeOld: 10, coauthorCap: 10 },
     style: {
         lineDistance: 24,
         meetingStyle: 'metro',

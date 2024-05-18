@@ -32,6 +32,10 @@ export const Settings = (props: { config: UserConfig, updateConfig: (f: (c: User
                     sanitize={sanitize(excludeInformalOpts, props.config.data.excludeInformal)}
                     options={{ all: "exclude all", repeated: "exclude repeated titles", none: "show all" }} />
                 <OptionalNumericInput classNames={['settings-setting-oneline', 'settings-input-container']} default={10}
+                    value={props.config.data.excludeOld || undefined} isValid={n => isFinite(n) && n > 0}
+                    setValue={n => props.updateConfig(excludeOld(n ?? false))}
+                    labels={{ infix: "exlude publications older than" }} unitString="years" />
+                <OptionalNumericInput classNames={['settings-setting-oneline', 'settings-input-container']} default={10}
                     value={props.config.data.coauthorCap || undefined} isValid={n => isFinite(n) && n > 0}
                     setValue={n => props.updateConfig(coauthorCap(n ?? false))}
                     labels={{ infix: "show only top", suffix: "coauthors" }} />
@@ -83,6 +87,8 @@ const dataSource: (src: DataConfig['source']) => (c: UserConfig) => UserConfig =
 const excludeInformal: (exc: DataConfig['excludeInformal']) => (c: UserConfig) => UserConfig =
     O.set(O.compose('data', 'excludeInformal'));
 
+const excludeOld: (v: number | false) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'excludeOld'));
+
 const coauthorCap: (v: number | false) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'coauthorCap'));
 
 const algoReal: (r: AlgoConfig['realization']) => (c: UserConfig) => UserConfig = O.set(O.compose('algo', 'realization'));
@@ -109,6 +115,3 @@ const enumStyle: (v: DrawingConfig['enumerateMeetings']) => (c: UserConfig) => U
 
 const sanitize = <T extends readonly string[]>(options: T, orElse: TupleToUnion<T>): (v: string) => TupleToUnion<T> =>
     (value: string) => options.includes(value) ? value as TupleToUnion<T> : orElse;
-
-interface Props {
-}
