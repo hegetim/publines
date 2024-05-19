@@ -413,6 +413,9 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, un
         while (j.tr) { j = addToBundle(bundle.id, j.tr); }
     });
 
+    // DO NOT USE THIS PATH! -- ONLY FOR METRICS
+    if (unordered) { return bundles.values().map(b => b.bc); }
+
     cutIntoRects.forEach(c => {
         const orig = originals[c.id]!;
         if (!c.tl && orig.tl) { place(orig.tl.id, c.id); }
@@ -422,18 +425,15 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, un
         cellBuf[c.lineIdx] = c;
     });
 
-    bundles.values().forEach(b1 => bundles.values().forEach(b2 => {
-        if (b1.meetingR && b2.meetingL && b2.meetingL >= b1.meetingR) { place(b1.id, b2.id); }
-        else if (b2.meetingR && b1.meetingL && b1.meetingL >= b2.meetingR) { place(b2.id, b1.id); }
+    bundles.values().forEach(b1 => bundles.values().filter(b2 => b2.id > b1.id).forEach(b2 => {
+        // console.debug(`looking at bundle ${b1.id} vs ${b2.id} with b1.L=${b1.meetingL} b1.R=${b1.meetingR} b2.L=${b2.meetingL} b2.R=${b2.meetingR}`)
+        if ((b2.meetingL ?? NaN) >= (b1.meetingR ?? NaN)) { place(b1.id, b2.id); }
+        else if ((b1.meetingL ?? NaN) >= (b2.meetingR ?? NaN)) { place(b2.id, b1.id); }
     }))
-
-    if (unordered) { // DO NOT USE THIS PATH! -- ONLY FOR METRICS
-        return bundles.values().map(b => b.bc);
-    } else {
-        const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
-        const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
-        return ordered.map(id => bundles.get(id)!.bc);
-    }
+    // console.debug({ msg: "bundles", bundles: bundles.values() });
+    const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
+    const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
+    return ordered.map(id => bundles.get(id)!.bc);
 }
 
 const nilBundle: Bundle = { id: -1, bc: [-1, -1, -1], placeBefore: [], meetingL: undefined, meetingR: undefined };
