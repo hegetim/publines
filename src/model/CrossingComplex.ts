@@ -126,10 +126,12 @@ const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number }
                 throw { conflictAt: m1 };
             }))));
 
+    // console.debug(`number of cells: ${cells.length}`);
     try {
         cells.forEach(cell => {
             const afterStart = cell.meetingsR.sort((a, b) => b - a); // sort descending
             allBefore(cell).forEach(hop1 => {
+                // console.debug(`checking for conflicts: ${cell.id}`)
                 doHop2(hop1, allTR(hop1), afterStart, 'top');
                 doHop2(hop1, allBR(hop1), afterStart, 'bottom');
             })
