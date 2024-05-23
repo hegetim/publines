@@ -5,7 +5,7 @@ import { bipartiteMis } from "./BiMis";
 import { splitmix32 } from "./Prng";
 import { DisjointSets } from "./DisjointSets";
 import { topologicalSortWithDfs } from "./TopologicalSorting";
-import { bfs } from "./GraphTraverse";
+import BitSet from "bitset";
 
 const PRNG_SEED = 0x42c0ffee;
 
@@ -112,34 +112,60 @@ const mkCells = (story: Storyline, realization: Realization) => {
 };
 
 const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number } | false => {
-    const allBefore = (c: Cell): Cell[] =>
-        [...bfs(c.id, v => _.compact([cells[v]!.tl, cells[v]!.bl]).map(c => c.id))].map(i => cells[i]!);
+    const meetingsL: (number | undefined)[] = Array.from({ length: cells.length }, () => undefined);
+    const meetingsR: (number | undefined)[] = Array.from({ length: cells.length }, () => undefined);
 
-    const allTR = (c: Cell): Cell[] => [...unfold(c, c => c.tr)];
-    const allBR = (c: Cell): Cell[] => [...unfold(c, c => c.br)];
-
-    const doHop2 = (hop1: Cell, cs: Cell[], afterStart: number[], hint: string) => cs.forEach(hop2 =>
-        allBefore(hop2).forEach(end => end.meetingsL.forEach(m2 =>
-            afterStart.filter(m => m <= m2).forEach(m1 => {
-                // console.debug(`conflicting meetings detected: ${1 + m1 + off} vs. ${1 + m2 + off}`)
-                // console.debug(`critical path from ${hop1.id} to ${hop2.id} (via ${hint} path ${cs.map(x => x.lineIdx)})`)
-                throw { conflictAt: m1 };
-            }))));
-
-    // console.debug(`number of cells: ${cells.length}`);
-    try {
-        cells.forEach(cell => {
-            const afterStart = cell.meetingsR.sort((a, b) => b - a); // sort descending
-            allBefore(cell).forEach(hop1 => {
-                // console.debug(`checking for conflicts: ${cell.id}`)
-                doHop2(hop1, allTR(hop1), afterStart, 'top');
-                doHop2(hop1, allBR(hop1), afterStart, 'bottom');
-            })
-        });
-        return false;
-    } catch (res) {
-        return res as { conflictAt: number };
+    const walkLeft = (c: Cell): number => {
+        if (meetingsL[c.id] === undefined) {
+            const tl = c.tl ? walkLeft(c.tl) : -Infinity;
+            const bl = c.bl ? walkLeft(c.bl) : -Infinity;
+            meetingsL[c.id] = Math.max(...c.meetingsL, tl, bl);
+        }
+        return meetingsL[c.id]!;
     }
+    const walkRight = (c: Cell): number => {
+        if (meetingsR[c.id] === undefined) {
+            const tr = c.tr ? walkRight(c.tr) : Infinity;
+            const br = c.br ? walkRight(c.br) : Infinity;
+            meetingsR[c.id] = Math.min(...c.meetingsR, tr, br);
+        }
+        return meetingsR[c.id]!;
+    }
+
+    cells.forEach(walkLeft);
+    cells.forEach(walkRight);
+
+    const checked = new BitSet();
+
+    for (let c of cells) {
+        if (checked.get(c.id) === 1) { continue; }
+        while (c.bl) { c = c.bl; }
+        checked.set(c.id, 1);
+        let r = meetingsR[c.id]!;
+        while (c.tr) {
+            c = c.tr;
+            if (meetingsL[c.id]! >= r) { return { conflictAt: r }; }
+            checked.set(c.id, 1);
+            r = Math.min(r, meetingsR[c.id]!);
+        }
+    }
+
+    checked.clear();
+
+    for (let c of cells) {
+        if (checked.get(c.id) === 1) { continue; }
+        while (c.tl) { c = c.tl; }
+        checked.set(c.id, 1);
+        let r = meetingsR[c.id]!;
+        while (c.br) {
+            c = c.br;
+            if (meetingsL[c.id]! >= r) { return { conflictAt: r }; }
+            checked.set(c.id, 1);
+            r = Math.min(r, meetingsR[c.id]!);
+        }
+    }
+
+    return false;
 }
 
 const mkCorners = (cells: Cell[]) => {
@@ -150,22 +176,18 @@ const mkCorners = (cells: Cell[]) => {
 
         // top-right edge
         if (cell.tr?.br) {
-            /*DEBUG*/if (cell.rCorner.tr || cell.tr.rCorner.bl) { console.warn('overwrite warning!'); }
             cell.rCorner.tr = cell.tr.rCorner;
             cell.tr.rCorner.bl = cell.rCorner;
         } else if (cell.br?.tr?.tl) {
-            /*DEBUG*/if (cell.rCorner.tr || cell.br.tr.tl.rCorner.bl) { console.warn('overwrite warning!'); }
             cell.rCorner.tr = cell.br.tr.tl.rCorner;
             cell.br.tr.tl.rCorner.bl = cell.rCorner;
         }
 
         // bottom-right edge
         if (cell.br?.tr) {
-            /*DEBUG*/if (cell.rCorner.br || cell.br.rCorner.tl) { console.warn('overwrite warning!'); }
             cell.rCorner.br = cell.br.rCorner;
             cell.br.rCorner.tl = cell.rCorner;
         } else if (cell.tr?.br?.bl) {
-            /*DEBUG*/if (cell.rCorner.br || cell.tr.br.bl.rCorner.tl) { console.warn('overwrite warning!'); }
             cell.rCorner.br = cell.tr.br.bl.rCorner;
             cell.tr.br.bl.rCorner.tl = cell.rCorner;
         }
@@ -274,16 +296,12 @@ const hasConflict = (br: EffectiveChord, tr: EffectiveChord) => {
     return atEnds || inBetween;
 }
 
-const hasConflictingEnds = (c: Corner, pattern: 'tl-tr' | 'tr-br' | 'br-bl' | 'bl-tl') => matchString(c.kind, {
-    incomplete: () => { throw new Error(`incomplete corner ${c} in effective chord`) },
-    internal: () => { throw new Error(`internal corner ${c} cannot have conflicting chords`) },
-    cut: () => { throw new Error(`cut corner ${c} cannot have conflicting chords`) },
-    "none-boundary": () => { throw new Error(`convex corner ${c} cannot have conflicting chords`) },
-    "any-boundary": () => true,
-    "point-hole": () => true,
-    "t-boundary": () => pattern !== 'br-bl',
-    "b-boundary": () => pattern !== 'tl-tr',
-});
+const hasConflictingEnds = (c: Corner, pattern: 'tl-tr' | 'tr-br' | 'br-bl' | 'bl-tl') => {
+    if (c.kind === 'any-boundary' || c.kind === 'point-hole') { return true; }
+    if (c.kind === 't-boundary') { return pattern !== 'br-bl'; }
+    if (c.kind === 'b-boundary') { return pattern !== 'tl-tr'; }
+    throw new Error(`unexpected corner ${c} in effective chord`);
+}
 
 const innerNodes = (c: EffectiveChord) => [...unfold(c.start, cur => {
     const next = cur[c.dir];
@@ -479,7 +497,7 @@ const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], of
 export const mkBundles = (story: Storyline, realized: Realization, off: number = 0): Realization => {
     random = splitmix32(PRNG_SEED);
     const cells = mkCells(story, realized);
-    let maybeConflict = hasMeetingConflicts(cells, off);
+    const maybeConflict = hasMeetingConflicts(cells, off);
     if (maybeConflict) { return splitAt(story, realized, maybeConflict.conflictAt + 1, off); }
     const corners = mkCorners(cells);
     const snapshot = structuredClone(cells);
