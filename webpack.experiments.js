@@ -4,7 +4,8 @@ const webpack = require('webpack');
 
 module.exports = merge(common, {
     entry: {
-        experiments: './src/experiments.ts'
+        'exp-main': './src/experiments/Main.ts',
+        'one-shot': './src/experiments/OneShot.ts'
     },
     plugins: [
         new webpack.NormalModuleReplacementPlugin(/model\/XmlUtils\.ts/, './NodeXmlUtils.ts')

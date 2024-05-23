@@ -10,7 +10,7 @@ export const run = async () => {
     const reals = stories.map(ss => ss.map(s => contenders.map(c => {
         console.debug(`[${s.authorIds.length - 1}] p=${s.authorIds[0]} ${c.description}`)
         return c.run(s);
-    }))) // by coauthor number x protagonist
+    }))); // by coauthor number x protagonist
     const n = contenders.length;
 
     stories.forEach((stories, i) => {  // i: #coauthors idx
@@ -26,3 +26,5 @@ export const run = async () => {
         });
     });
 }
+
+run();
