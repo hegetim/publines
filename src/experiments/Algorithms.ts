@@ -31,7 +31,7 @@ export const contenders: Contender[] = [
     oneSidedWithBundling,
     twoSidedWithBundling,
     oldGreedySbcm,
-    // oldGreedySbcmWithBundling,
+    oldGreedySbcmWithBundling,
     bidirectionalSbcm,
-    // bidirectionalSbcmWithBundling,
+    bidirectionalSbcmWithBundling,
 ]

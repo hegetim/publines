@@ -75,18 +75,3 @@ export const bipartiteMis = (g: (v: number) => number[], a: number, b: number) =
     /* DEBUG */ assertIndependent(g, a, ...res);
     return res;
 }
-
-export const testMIS = () => {
-    // const test = [[1, 2], [], [0, 3], [2], [2, 3], [4]];
-    const test = [[0, 1, 3], [0, 1, 3, 4], [2], [2], [1, 2, 3, 4]];
-    const g = (v: number) => test[v]!
-    const [a, b] = [5, 5]
-    const m = maxMatching(g, a, b);
-    const [isa, isb] = mkMis(g, m, a);
-    assertIndependent(g, a, isa, isb);
-
-    const mis: number[] = [];
-    _.range(0, a).forEach(i => { if (isa.get(i)) { mis.push(i + 1) } })
-    _.range(0, b).forEach(i => { if (isb.get(i)) { mis.push(i + a + 1) } })
-    console.log(mis);
-}

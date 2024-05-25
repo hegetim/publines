@@ -22,6 +22,8 @@ interface Cell extends GridNode<Cell> {
     rCorner: Corner,  // this corner is unique for every cell; l would also work
     meetingsL: number[],
     meetingsR: number[],
+    left: Cell | undefined,
+    right: Cell | undefined,
 }
 
 type Corner = GridNode<Corner> & {
@@ -57,6 +59,8 @@ let random = splitmix32(PRNG_SEED);
 
 const empty = <T extends GridNode<T>>(id: number): GridNode<T> =>
     ({ id, tr: undefined, br: undefined, bl: undefined, tl: undefined });
+const initCell = (id: number, cr: Corner, i: number): Cell =>
+    ({ ...empty(id), rCorner: cr, lineIdx: i, meetingsL: [], meetingsR: [], left: undefined, right: undefined });
 
 const applyX = (perm: number[], x: number) => {
     const tmp = perm[x]!;
@@ -88,13 +92,17 @@ const mkCells = (story: Storyline, realization: Realization) => {
                 if (left && left.id !== 'dummy' && bl && left.id > bl.id) { bl = undefined; }
 
                 const rCorner: Corner = { ...empty(cells.length), kind: 'incomplete', cell: unsafeCellDummyForSwap };
-                const cell: Cell = { ...empty(cells.length), tl, bl, rCorner, lineIdx: x, meetingsL: [], meetingsR: [] };
+                const cell: Cell = { ...initCell(cells.length, rCorner, x), tl, bl, left: realCell(x) };
+
                 rCorner.cell = cell;
                 cells.push(cell);
                 cellBuf[x] = cell;
                 if (bl) { bl.tr = cell; }
                 if (tl) { tl.br = cell; }
-                if (left) { cell.meetingsL = left.meetingsR; }
+                if (left) {
+                    cell.meetingsL = left.meetingsR;
+                    if (left.id !== 'dummy') { left.right = cell; }
+                }
 
                 applyX(perm, x);
             });
@@ -118,16 +126,18 @@ const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number }
     const walkLeft = (c: Cell): number => {
         if (meetingsL[c.id] === undefined) {
             const tl = c.tl ? walkLeft(c.tl) : -Infinity;
+            const l = c.left ? walkLeft(c.left) : -Infinity;
             const bl = c.bl ? walkLeft(c.bl) : -Infinity;
-            meetingsL[c.id] = Math.max(...c.meetingsL, tl, bl);
+            meetingsL[c.id] = Math.max(...c.meetingsL, tl, l, bl);
         }
         return meetingsL[c.id]!;
     }
     const walkRight = (c: Cell): number => {
         if (meetingsR[c.id] === undefined) {
             const tr = c.tr ? walkRight(c.tr) : Infinity;
+            const r = c.right ? walkRight(c.right) : Infinity;
             const br = c.br ? walkRight(c.br) : Infinity;
-            meetingsR[c.id] = Math.min(...c.meetingsR, tr, br);
+            meetingsR[c.id] = Math.min(...c.meetingsR, tr, r, br);
         }
         return meetingsR[c.id]!;
     }
@@ -407,7 +417,6 @@ const select2 = (c: Corner): SimpleChord[] => {
 
 const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, unordered: boolean = false): BlockCrossings => {
     const bundles = DisjointSets(mergeBundles, () => nilBundle);
-    const cellBuf: (Cell | undefined)[] = Array.from({ length: k });
 
     const addToBundle = (bundleId: number, cell: Cell) => {
         if (!bundles.contains(cell.id)) { bundles.mkSet(cell.id, { ...nilBundle, ...cellMeetings(cell) }); }
@@ -440,9 +449,7 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, un
         const orig = originals[c.id]!;
         if (!c.tl && orig.tl) { place(orig.tl.id, c.id); }
         if (!c.bl && orig.bl) { place(orig.bl.id, c.id); }
-        const left = cellBuf[c.lineIdx];
-        if (left && bundles.contains(left.id) && bundles.contains(c.id)) { place(left.id, c.id); }
-        cellBuf[c.lineIdx] = c;
+        if (c.left && bundles.contains(c.left.id) && bundles.contains(c.id)) { place(c.left.id, c.id); }
     });
 
     bundles.values().forEach(b1 => bundles.values().filter(b2 => b2.id > b1.id).forEach(b2 => {
