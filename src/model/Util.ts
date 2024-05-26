@@ -94,3 +94,5 @@ export const shuffle = <T>(ts: T[], random: () => number) => _.range(ts.length -
     ts[i] = ts[j]!;
     ts[j] = tmp;
 });
+
+export const ifLet = <T, R>(t: T | undefined, f: (t: T) => R) => t === undefined ? undefined : f(t);

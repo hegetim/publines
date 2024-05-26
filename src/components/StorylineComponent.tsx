@@ -92,7 +92,7 @@ const mkRealization = (config: AlgoConfig) => (story: Storyline) => matchString(
 
 const mkBundling = (config: AlgoConfig, story: Storyline) => (real: Realization) => matchString(config.bundling, {
     ignore: () => real,
-    bundle: () => mkBundles(story, real),
+    bundle: () => { const [res, splits] = mkBundles(story, real); console.log(`#splits: ${splits}`); return res; },
     unbundle: () => unbundle(real),
 });
 

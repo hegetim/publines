@@ -1,19 +1,18 @@
 import BitSet from "bitset";
 
-export class CycleDetected extends Error {
-    constructor(msg?: string) {
-        super(msg);
-        this.name = (this as Object).constructor.name;
-    }
-}
+type CycleDetected = { kind: 'cycle', containsNode: number };
+type OrderedResult = { kind: 'ordered', ordered: number[] };
+export type DfsResult = CycleDetected | OrderedResult;
 
-export const topologicalSortWithDfs = (ids: number[], neighbors: (v: number) => number[]) => {
+export const topologicalSortWithDfs = (ids: number[], neighbors: (v: number) => number[]): DfsResult => {
     const [visited, finished] = [new BitSet(), new BitSet()];
     const result: number[] = [];
 
+    let cycleFlag: CycleDetected | undefined = undefined;
+
     const visit = (v: number) => {
-        if (finished.get(v) !== 1) {
-            if (visited.get(v) === 1) { throw new CycleDetected(`cycle contains node ${v}`); }
+        if (!cycleFlag && finished.get(v) !== 1) {
+            if (visited.get(v) === 1) { cycleFlag = { kind: 'cycle', containsNode: v }; }
             visited.set(v, 1);
             neighbors(v).forEach(u => visit(u));
             finished.set(v, 1);
@@ -21,6 +20,9 @@ export const topologicalSortWithDfs = (ids: number[], neighbors: (v: number) => 
         }
     }
 
-    ids.forEach(v => visit(v));
-    return result.reverse();
+    for (const v of ids) {
+        visit(v);
+        if (cycleFlag) { return cycleFlag; }
+    }
+    return { kind: 'ordered', ordered: result.reverse() };
 }

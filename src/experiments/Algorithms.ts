@@ -12,7 +12,7 @@ export interface Contender {
 }
 
 const withBundling = (c: Contender): Contender => ({
-    run: (s: Storyline) => mkBundles(s, c.run(s)),
+    run: (s: Storyline) => mkBundles(s, c.run(s))[0],
     description: `${c.description}+bundling`,
 });
 

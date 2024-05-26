@@ -23,7 +23,6 @@ interface Cell extends GridNode<Cell> {
     meetingsL: number[],
     meetingsR: number[],
     left: Cell | undefined,
-    right: Cell | undefined,
 }
 
 type Corner = GridNode<Corner> & {
@@ -60,7 +59,7 @@ let random = splitmix32(PRNG_SEED);
 const empty = <T extends GridNode<T>>(id: number): GridNode<T> =>
     ({ id, tr: undefined, br: undefined, bl: undefined, tl: undefined });
 const initCell = (id: number, cr: Corner, i: number): Cell =>
-    ({ ...empty(id), rCorner: cr, lineIdx: i, meetingsL: [], meetingsR: [], left: undefined, right: undefined });
+    ({ ...empty(id), rCorner: cr, lineIdx: i, meetingsL: [], meetingsR: [], left: undefined });
 
 const applyX = (perm: number[], x: number) => {
     const tmp = perm[x]!;
@@ -99,10 +98,7 @@ const mkCells = (story: Storyline, realization: Realization) => {
                 cellBuf[x] = cell;
                 if (bl) { bl.tr = cell; }
                 if (tl) { tl.br = cell; }
-                if (left) {
-                    cell.meetingsL = left.meetingsR;
-                    if (left.id !== 'dummy') { left.right = cell; }
-                }
+                if (left) { cell.meetingsL = left.meetingsR; }
 
                 applyX(perm, x);
             });
@@ -118,65 +114,6 @@ const mkCells = (story: Storyline, realization: Realization) => {
 
     return cells;
 };
-
-const hasMeetingConflicts = (cells: Cell[], off: number): { conflictAt: number } | false => {
-    const meetingsL: (number | undefined)[] = Array.from({ length: cells.length }, () => undefined);
-    const meetingsR: (number | undefined)[] = Array.from({ length: cells.length }, () => undefined);
-
-    const walkLeft = (c: Cell): number => {
-        if (meetingsL[c.id] === undefined) {
-            const tl = c.tl ? walkLeft(c.tl) : -Infinity;
-            const l = c.left ? walkLeft(c.left) : -Infinity;
-            const bl = c.bl ? walkLeft(c.bl) : -Infinity;
-            meetingsL[c.id] = Math.max(...c.meetingsL, tl, l, bl);
-        }
-        return meetingsL[c.id]!;
-    }
-    const walkRight = (c: Cell): number => {
-        if (meetingsR[c.id] === undefined) {
-            const tr = c.tr ? walkRight(c.tr) : Infinity;
-            const r = c.right ? walkRight(c.right) : Infinity;
-            const br = c.br ? walkRight(c.br) : Infinity;
-            meetingsR[c.id] = Math.min(...c.meetingsR, tr, r, br);
-        }
-        return meetingsR[c.id]!;
-    }
-
-    cells.forEach(walkLeft);
-    cells.forEach(walkRight);
-
-    const checked = new BitSet();
-
-    for (let c of cells) {
-        if (checked.get(c.id) === 1) { continue; }
-        while (c.bl) { c = c.bl; }
-        checked.set(c.id, 1);
-        let r = meetingsR[c.id]!;
-        while (c.tr) {
-            c = c.tr;
-            if (meetingsL[c.id]! >= r) { return { conflictAt: r }; }
-            checked.set(c.id, 1);
-            r = Math.min(r, meetingsR[c.id]!);
-        }
-    }
-
-    checked.clear();
-
-    for (let c of cells) {
-        if (checked.get(c.id) === 1) { continue; }
-        while (c.tl) { c = c.tl; }
-        checked.set(c.id, 1);
-        let r = meetingsR[c.id]!;
-        while (c.br) {
-            c = c.br;
-            if (meetingsL[c.id]! >= r) { return { conflictAt: r }; }
-            checked.set(c.id, 1);
-            r = Math.min(r, meetingsR[c.id]!);
-        }
-    }
-
-    return false;
-}
 
 const mkCorners = (cells: Cell[]) => {
     const corners: Corner[] = cells.map(c => c.rCorner);
@@ -415,7 +352,11 @@ const select2 = (c: Corner): SimpleChord[] => {
     return [{ start: c, dir: dir1 }, { start: c, dir: dir2 }];
 };
 
-const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, unordered: boolean = false): BlockCrossings => {
+const mkBlockCrossings = (
+    originals: Cell[],
+    cutIntoRects: Cell[],
+    unordered: boolean = false
+): { kind: 'bcs', bcs: BlockCrossings } | { kind: 'split', splitAt: number } => {
     const bundles = DisjointSets(mergeBundles, () => nilBundle);
 
     const addToBundle = (bundleId: number, cell: Cell) => {
@@ -443,7 +384,10 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, un
     });
 
     // DO NOT USE THIS PATH! -- ONLY FOR METRICS
-    if (unordered) { return bundles.values().map(b => b.bc); }
+    if (unordered) { return { kind: 'bcs', bcs: bundles.values().map(b => b.bc) }; }
+
+    const conflict = bundles.values().find(b => (b.meetingL ?? NaN) >= (b.meetingR ?? NaN));
+    if (conflict) { return { kind: 'split', splitAt: conflict.meetingR! + 1 }; }
 
     cutIntoRects.forEach(c => {
         const orig = originals[c.id]!;
@@ -453,14 +397,17 @@ const mkBlockCrossings = (originals: Cell[], cutIntoRects: Cell[], k: number, un
     });
 
     bundles.values().forEach(b1 => bundles.values().filter(b2 => b2.id > b1.id).forEach(b2 => {
-        // console.debug(`looking at bundle ${b1.id} vs ${b2.id} with b1.L=${b1.meetingL} b1.R=${b1.meetingR} b2.L=${b2.meetingL} b2.R=${b2.meetingR}`)
         if ((b2.meetingL ?? NaN) >= (b1.meetingR ?? NaN)) { place(b1.id, b2.id); }
         else if ((b1.meetingL ?? NaN) >= (b2.meetingR ?? NaN)) { place(b2.id, b1.id); }
     }))
     // console.debug({ msg: "bundles", bundles: bundles.values() });
     const ids = bundles.values().map(b => b.id).sort((a, b) => b - a); // sort descending
-    const ordered = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
-    return ordered.map(id => bundles.get(id)!.bc);
+    const dfsResult = topologicalSortWithDfs(ids, v => bundles.get(v)!.placeBefore);
+    if (dfsResult.kind === 'cycle') {
+        const splitAt = cycleConflict(bundles, dfsResult.containsNode);
+        if (splitAt === -1) { throw new Error(`could not detect cycle conflict at node ${dfsResult.containsNode}`); }
+        return { kind: 'split', splitAt };
+    } else { return { kind: 'bcs', bcs: dfsResult.ordered.map(id => bundles.get(id)!.bc) }; }
 }
 
 const nilBundle: Bundle = { id: -1, bc: [-1, -1, -1], placeBefore: [], meetingL: undefined, meetingR: undefined };
@@ -474,6 +421,30 @@ const mergeBundles = (a: Bundle, b: Bundle): Bundle => ({
 
 const cellMeetings = (cell: Cell) =>
     ({ meetingL: finite(Math.max(...cell.meetingsL)), meetingR: finite(Math.min(...cell.meetingsR)) });
+
+const cycleConflict = (bundles: DisjointSets<Bundle>, onCycle: number): number => {
+    const finished = new BitSet();
+
+    const visit = (next: number, ml: number | undefined): number => {
+        if (finished.get(next) === 1) { return -1; }
+
+        const b1 = bundles.get(next)!;
+        const l = ml === undefined ? b1.meetingL : ((b1.meetingL ?? NaN) > ml ? b1.meetingL : ml);
+        if (l !== undefined) {
+            for (const b2 of b1.placeBefore.map(i => bundles.get(i)!)) {
+                if ((b2.meetingR ?? NaN) <= l) { return b2.meetingR! + 1; }
+            }
+        }
+        for (const j of b1.placeBefore) {
+            const res = visit(j, l);
+            if (res > -1) { return res; }
+        }
+        finished.set(next, 1);
+        return -1;
+    }
+
+    return visit(onCycle, undefined);
+}
 
 const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], off: number): Realization => {
     // console.debug(`initial permutation is ${init}`)
@@ -501,31 +472,32 @@ const mkRealization = (story: Storyline, bcs: BlockCrossings, init: number[], of
     return { initialPermutation: init, blockCrossings: sequences };
 }
 
-export const mkBundles = (story: Storyline, realized: Realization, off: number = 0): Realization => {
+export const mkBundles = (story: Storyline, realized: Realization, off: number = 0): [Realization, number] => {
     random = splitmix32(PRNG_SEED);
     const cells = mkCells(story, realized);
-    const maybeConflict = hasMeetingConflicts(cells, off);
-    if (maybeConflict) { return splitAt(story, realized, maybeConflict.conflictAt + 1, off); }
     const corners = mkCorners(cells);
     const snapshot = structuredClone(cells);
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
-    const bcs = mkBlockCrossings(snapshot, cells, story.authorIds.length);
-    // console.debug({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcs), story, cells })
-    return mkRealization(story, structuredClone(bcs), realized.initialPermutation, off);
+    const bcsResult = mkBlockCrossings(snapshot, cells);
+    if (bcsResult.kind === 'split') { return splitAt(story, realized, bcsResult.splitAt, off); }
+    else {
+        // console.debug({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcsResult.bcs), story, cells })
+        return [mkRealization(story, structuredClone(bcsResult.bcs), realized.initialPermutation, off), 0];
+    }
 }
 
-const splitAt = (story: Storyline, realized: Realization, atExcl: number, off: number): Realization => {
+const splitAt = (story: Storyline, realized: Realization, atExcl: number, off: number): [Realization, number] => {
     // console.debug(`splitting before ${atExcl + off + 1}`);
     const storyA: Storyline = { ...story, meetings: story.meetings.slice(0, atExcl) };
     const storyB: Storyline = { ...story, meetings: story.meetings.slice(atExcl) };
     const realA: Realization = { ...realized, blockCrossings: realized.blockCrossings.slice(0, atExcl) };
     const realB: Realization =
         { initialPermutation: endPermutation(realA), blockCrossings: realized.blockCrossings.slice(atExcl) };
-
-    const [bundledA, bundledB] = [mkBundles(storyA, realA, off), mkBundles(storyB, realB, off + atExcl)];
+    const [[bundledA, splitsA], [bundledB, splitsB]] =
+        [mkBundles(storyA, realA, off), mkBundles(storyB, realB, off + atExcl)];
     const blockCrossings = overlappingJoin(bundledA.blockCrossings, storyA.meetings.length, bundledB.blockCrossings);
-    return { initialPermutation: bundledA.initialPermutation, blockCrossings };
+    return [{ initialPermutation: bundledA.initialPermutation, blockCrossings }, splitsA + splitsB + 1];
 }
 
 const overlappingJoin = <T>(a: T[][], n: number, b: T[][]) => {
@@ -547,7 +519,9 @@ export const bundleNumber = (story: Storyline, realized: Realization): number =>
     const snapshot = structuredClone(cells);
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
-    return mkBlockCrossings(snapshot, cells, story.authorIds.length, true).length;
+    const bcsResult = mkBlockCrossings(snapshot, cells, true);
+    if (bcsResult.kind === 'bcs') { return bcsResult.bcs.length; }
+    else { throw new Error(`unreachable`); }
 }
 
 export const unbundle = (realization: Realization): Realization =>
