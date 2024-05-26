@@ -15,6 +15,7 @@ import { chain, matchString } from "../model/Util"
 import { greedySbcm } from "../model/GreedySbcm"
 import { mkBundles, unbundle } from "../model/CrossingComplex"
 import { biSbcm } from "../model/BiSbcm"
+import { medianScm } from "../model/MedianScm"
 
 export const StorylineComponent = (props: {
     config: UserConfig,
@@ -84,7 +85,8 @@ const mkPipeline = (config: AlgoConfig, story: Storyline) =>
 const mkRealization = (config: AlgoConfig) => (story: Storyline) => matchString(config.realization, {
     '1scm': () => oneSidedScm(story),
     '2scm': () => twoSidedScm(story),
-    'sbcm': () => greedySbcm(story, Math.max(6, story.authorIds.length / 2)),
+    mscm: () => medianScm(story),
+    sbcm: () => greedySbcm(story, Math.max(6, story.authorIds.length / 2)),
     'bi-sbcm': () => biSbcm(story),
 });
 

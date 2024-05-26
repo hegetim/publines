@@ -32,7 +32,7 @@ export interface AlgoConfig {
     bundling: 'bundle' | 'ignore' | 'unbundle',
 }
 
-export const realizationAlgos = ['1scm', '2scm', 'sbcm', 'bi-sbcm'] as const;
+export const realizationAlgos = ['1scm', '2scm', 'mscm', 'sbcm', 'bi-sbcm'] as const;
 
 const baseThickness = 3;
 

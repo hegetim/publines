@@ -1,6 +1,7 @@
 import { biSbcm } from "../model/BiSbcm";
 import { mkBundles } from "../model/CrossingComplex";
-import { greedySbcm } from "../model/GreedySbcm";
+import { biSbcmOld, greedySbcm } from "../model/GreedySbcm";
+import { medianScm } from "../model/MedianScm";
 import { oneSidedScm } from "../model/OneSided";
 import { Realization, Storyline } from "../model/Storyline";
 import { twoSidedScm } from "../model/TwoSided";
@@ -15,23 +16,26 @@ const withBundling = (c: Contender): Contender => ({
     description: `${c.description}+bundling`,
 });
 
-export const oneSidedWithBundling: Contender =
-    withBundling({ run: (s: Storyline) => oneSidedScm(s), description: "osScm" });
-export const twoSidedWithBundling: Contender =
-    withBundling({ run: (s: Storyline) => twoSidedScm(s), description: "tsScm" });
+export const oneSidedWithBundling = withBundling({ run: (s: Storyline) => oneSidedScm(s), description: "osScm" });
+export const twoSidedWithBundling = withBundling({ run: (s: Storyline) => twoSidedScm(s), description: "tsScm" });
 export const oldGreedySbcm: Contender =
     { run: (s: Storyline) => greedySbcm(s, Math.max(6, s.authorIds.length / 2)), description: "oldGreedySbcm" };
 export const oldGreedySbcmWithBundling = withBundling(oldGreedySbcm);
-export const bidirectionalSbcm: Contender =
-    { run: (s: Storyline) => biSbcm(s), description: "bidiSbcm" };
+export const bidirectionalSbcm: Contender = { run: (s: Storyline) => biSbcm(s), description: "bidiSbcm" };
 export const bidirectionalSbcmWithBundling = withBundling(bidirectionalSbcm);
-// todo barycenterScmWithBundling
+export const bidirectionalOldGreedySbcm: Contender =
+    { run: (s: Storyline) => biSbcmOld(s), description: "bidiOldGreedySbcm" }
+export const bidiOldGreedySbcmWithBundling = withBundling(bidirectionalOldGreedySbcm);
+export const medianScmWithBundling = withBundling({ run: (s: Storyline) => medianScm(s), description: "medianScm" });
 
 export const contenders: Contender[] = [
     oneSidedWithBundling,
     twoSidedWithBundling,
+    medianScmWithBundling,
     oldGreedySbcm,
     oldGreedySbcmWithBundling,
+    bidirectionalOldGreedySbcm,
+    bidiOldGreedySbcmWithBundling,
     bidirectionalSbcm,
     bidirectionalSbcmWithBundling,
 ]

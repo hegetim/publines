@@ -6,7 +6,10 @@
  * see commit c89ba797da13acd93a0262cd061ba257367d91ec                           *
  *********************************************************************************/
 
+import _ from "lodash";
+import { shuffle } from "./Util";
 import { BlockCrossings, Realization, Storyline } from "./Storyline";
+import { splitmix32 } from "./Prng";
 
 type Group = { author: number, position: number }[];
 
@@ -319,4 +322,15 @@ export const greedySbcm = (storyline: Storyline, lookahead: number): Realization
     const allAuthors = Array.from({ length: Math.max(...meetings.flat()) + 1 }, (_, i) => i);
     const initialPermutation: number[] = heuristicPermutation(allAuthors, meetings, lookahead);
     return greedySbcmStep(storyline, lookahead, initialPermutation)[0];
+}
+
+const PRNG_SEED = 0x42c0ffee;
+
+export const biSbcmOld = (story: Storyline): Realization => {
+    const randomPermutation = _.range(0, story.authorIds.length);
+    shuffle(randomPermutation, splitmix32(PRNG_SEED));
+    const lookahead = Math.max(6, story.authorIds.length / 2);
+    const [_0, initialPermutation] =
+        greedySbcmStep({ ...story, meetings: story.meetings.toReversed() }, lookahead, randomPermutation);
+    return greedySbcmStep(story, lookahead, initialPermutation)[0];
 }

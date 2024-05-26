@@ -21,12 +21,12 @@ type Block = { a: number, b: number, c: number, d: number };
 
 const PRNG_SEED = 0x42c0ffee;
 
-interface Attendance {
+export interface Attendance {
     readonly has: (author: number, meeting: number) => boolean,
     readonly score: (a: number, b: number, startAt: number) => number,
 }
 
-const mkAttendance = (k: number, ms: number[][]): Attendance => {
+export const mkAttendance = (k: number, ms: number[][]): Attendance => {
     const n = ms.length;
     const buf = Array.from({ length: k }, () => new BitSet());
     ms.forEach((meeting, i) => meeting.forEach(a => buf[a]!.set(i, 1)));
@@ -37,6 +37,14 @@ const mkAttendance = (k: number, ms: number[][]): Attendance => {
         return i - startAt;
     }
     return { has, score };
+}
+
+export const biSbcm = (story: Storyline): Realization => {
+    const randomPermutation = _.range(0, story.authorIds.length);
+    shuffle(randomPermutation, splitmix32(PRNG_SEED));
+    const [_0, initialPermutation] = realize(randomPermutation, story.meetings.toReversed());
+    const [blockCrossings, _1] = realize(initialPermutation, story.meetings);
+    return { initialPermutation, blockCrossings };
 }
 
 const nextBlock = (perm: number[], m: number, att: Attendance): Block => {
@@ -101,20 +109,3 @@ const realize = (start: number[], meetings: number[][]): [BlockCrossings[], numb
 
     return [real, perm];
 }
-
-export const biSbcm = (story: Storyline): Realization => {
-    const randomPermutation = _.range(0, story.authorIds.length);
-    shuffle(randomPermutation, splitmix32(PRNG_SEED));
-    const [_0, initialPermutation] = realize(randomPermutation, story.meetings.toReversed());
-    const [blockCrossings, _1] = realize(initialPermutation, story.meetings);
-    return { initialPermutation, blockCrossings };
-}
-
-// export const biSbcmOld = (story: Storyline): Realization => {
-//     const randomPermutation = _.range(0, story.authorIds.length);
-//     shuffle(randomPermutation, splitmix32(PRNG_SEED));
-//     const lookahead = Math.max(6, story.authorIds.length / 2);
-//     const [_0, initialPermutation] =
-//         greedySbcmStep({ ...story, meetings: story.meetings.toReversed() }, lookahead, randomPermutation);
-//     return greedySbcmStep(story, lookahead, initialPermutation)[0];
-// }
