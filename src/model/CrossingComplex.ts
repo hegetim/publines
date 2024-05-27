@@ -523,6 +523,3 @@ export const bundleNumber = (story: Storyline, realized: Realization): number =>
     if (bcsResult.kind === 'bcs') { return bcsResult.bcs.length; }
     else { throw new Error(`unreachable`); }
 }
-
-export const unbundle = (realization: Realization): Realization =>
-    ({ ...realization, blockCrossings: mkPwCrossings(realization).map(xs => xs.map(x => [x, x, x + 1])) });

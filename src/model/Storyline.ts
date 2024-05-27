@@ -87,3 +87,6 @@ export const mkPwCrossings = (real: Realization): number[][] =>
     real.blockCrossings.map(tmp => tmp.flatMap(([a, b, c]) =>
         _.range(b, a - 1, -1).flatMap(y => _.range(y, y - b + c))
     ));
+
+export const unbundle = (realization: Realization): Realization =>
+    ({ ...realization, blockCrossings: mkPwCrossings(realization).map(xs => xs.map(x => [x, x, x + 1])) });
