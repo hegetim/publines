@@ -25,6 +25,8 @@ interface Cell extends GridNode<Cell> {
     left: Cell | undefined,
 }
 
+type FrozenCell = Readonly<GridNode<FrozenCell>> & { readonly cornerId: number };
+
 type Corner = GridNode<Corner> & {
     kind: 'incomplete'          // not yet determined
     | 'internal'                // internal corner (4 adjacent faces w/o conflicting meetings)
@@ -194,6 +196,18 @@ const hasNoDuplicates = (xs: number[]) => {
     return true;
 };
 
+const freezeNode = <T extends GridNode<T>>(node: T, cornerId: number): FrozenCell =>
+    ({ ...(node as FrozenCell), cornerId });
+
+const freeze = (cells: Cell[]): FrozenCell[] => {
+    const nodes = cells.map(c => empty(c.id));
+    cells.forEach(c => {
+        if (c.tl) { nodes[c.id]!.tl = nodes[c.tl.id]; nodes[c.tl.id]!.br = nodes[c.id]; }
+        if (c.tr) { nodes[c.id]!.tr = nodes[c.tr.id]; nodes[c.tr.id]!.bl = nodes[c.id]; }
+    })
+    return cells.map(node => freezeNode(node, cells[node.id]!.rCorner.id));
+}
+
 const mkEffectiveChords = (corners: Corner[]) => {
     const brChords = corners.flatMap(c => mkEffectiveChord(c, 'br'));
     const trChords = corners.flatMap(c => mkEffectiveChord(c, 'tr'));
@@ -255,8 +269,8 @@ const innerNodes = (c: EffectiveChord) => [...unfold(c.start, cur => {
     return next && next.id === c.end.id ? undefined : next;
 })].slice(1);
 
-const cut = (originals: Cell[], cells: Cell[], from: Corner, dir: Direction) => {
-    const cutCell = (from: Cell, to: Cell, dir: Direction) =>
+const cut = (originals: FrozenCell[], cells: Cell[], from: Corner, dir: Direction) => {
+    const cutCell = (from: FrozenCell, to: FrozenCell, dir: Direction) =>
         cutGrid(cells[from.id]!, cells[to.id]!, dir);
 
     const to = from[dir];
@@ -265,7 +279,7 @@ const cut = (originals: Cell[], cells: Cell[], from: Corner, dir: Direction) => 
 
     const cell_ = originals[from.cell.id]!;
 
-    if (cell_.rCorner.id === from.id) {
+    if (cell_.cornerId === from.id) {
         matchString(dir, {
             tr: () => {
                 if (cell_.tr?.br) { cutCell(cell_.tr, cell_.tr.br, 'br'); }
@@ -353,7 +367,7 @@ const select2 = (c: Corner): SimpleChord[] => {
 };
 
 const mkBlockCrossings = (
-    originals: Cell[],
+    originals: FrozenCell[],
     cutIntoRects: Cell[],
     unordered: boolean = false
 ): { kind: 'bcs', bcs: BlockCrossings } | { kind: 'split', splitAt: number } => {
@@ -476,14 +490,14 @@ export const mkBundles = (story: Storyline, realized: Realization, off: number =
     random = splitmix32(PRNG_SEED);
     const cells = mkCells(story, realized);
     const corners = mkCorners(cells);
-    const snapshot = structuredClone(cells);
+    const snapshot = freeze(cells);
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     const bcsResult = mkBlockCrossings(snapshot, cells);
     if (bcsResult.kind === 'split') { return splitAt(story, realized, bcsResult.splitAt, off); }
     else {
         // console.debug({ msg: `after bundling (${off + 1}+)`, bcs: structuredClone(bcsResult.bcs), story, cells })
-        return [mkRealization(story, structuredClone(bcsResult.bcs), realized.initialPermutation, off), 0];
+        return [mkRealization(story, _.cloneDeep(bcsResult.bcs), realized.initialPermutation, off), 0];
     }
 }
 
@@ -516,7 +530,7 @@ export const bundleNumber = (story: Storyline, realized: Realization): number =>
     random = splitmix32(PRNG_SEED);
     const cells = mkCells(story, realized);
     const corners = mkCorners(cells);
-    const snapshot = structuredClone(cells);
+    const snapshot = freeze(cells);
     mkEffectiveChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     mkSimpleChords(corners).forEach(chord => cut(snapshot, cells, chord.start, chord.dir));
     const bcsResult = mkBlockCrossings(snapshot, cells, true);
