@@ -3,7 +3,7 @@ import { bundleNumber } from "../model/CrossingComplex";
 import { Realization, Storyline, calcMetrics, Metrics as BaseMetrics } from "../model/Storyline";
 import { matchString } from "../model/Util";
 
-type Metrics = BaseMetrics & { bundleNumber: number };
+export type Metrics = BaseMetrics & { bundleNumber: number };
 
 export const evaluateOne = (story: Storyline, real: Realization): Metrics => {
     const metrics = calcMetrics(real);

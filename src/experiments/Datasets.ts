@@ -23,10 +23,10 @@ const fetchPublications = async (authorIds: string[]) => {
 
 export const publications = async () => useCache<PubData>('publications.json', () => fetchPublications(authorIds));
 
-export const filterPast10Years = (ps: Publication[]) => mkFilter("none", { fromIncl: 2014, toIncl: 2024 })(ps);
+const filterPast10Years = (ps: Publication[]) => mkFilter("none", { fromIncl: 2014, toIncl: 2024 })(ps);
 
-const storyline = (ps: Publication[], p: string, limit: number) =>
-    mkStoryline(ps, { id: p, name: `Fake Author ${p}` }, limit)[0];
+export const setupStoryline = (ps: Publication[], p: string, limit: number) =>
+    mkStoryline(filterPast10Years(ps), { id: p, name: `Fake Author ${p}` }, limit)[0];
 
 const checkLimit = (story: Storyline, limit: number) => story.authorIds.length === limit + 1;
 
@@ -35,7 +35,7 @@ export const kBatches = [5, 10, 15, 20];
 export const setupStorylines = (p: string, ps: Publication[]) => {
     const result: Storyline[] = [];
     for (const limit of kBatches) {
-        const story = storyline(ps, p, limit);
+        const story = setupStoryline(ps, p, limit);
         if (checkLimit(story, limit)) { result.push(story); }
         else {
             console.log(`discarded ${p} because they had fewer than ${limit} coauthors`);

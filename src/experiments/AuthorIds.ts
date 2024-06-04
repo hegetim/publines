@@ -3,8 +3,8 @@ export const authorIds = [
   "185/1576",  // Daniel Archambault
   "172/8846",  // Alessio Arleo
   "b/GiuseppeDiBattista", // Giuseppe Di Battista
-  "23/3153",   // Olivier Bernardi
-  "258/5126",  // Daniel Bertschinger
+  // "23/3153",   // Olivier Bernardi
+  // "258/5126",  // Daniel Bertschinger
   "19/2484",   // Carla Binucci
   "182/2067",  // Cornelius Brand
   "182/6426",  // Davide Ceneda
@@ -17,7 +17,7 @@ export const authorIds = [
   "e/PeterEades", // Peter Eades
   "e/DEppstein", // David Eppstein
   "09/2980",   // Stefan Felsner
-  "224/7419",  // Velitchko Andreev Filipov
+  // "224/7419",  // Velitchko Andreev Filipov
   "f/FedorVFomin", // Fedor Fomin
   "180/6420",  // Henry Förster
   "80/5167",   // Éric Fusy
@@ -30,13 +30,13 @@ export const authorIds = [
   "45/7178-2", // Siddharth Gupta
   "53/1317",   // Petr Hlinený
   "h/SeokHeeHong", // Seok-Hee Hong
-  "30/3978",   // Alfredo Hubard
+  // "30/3978",   // Alfredo Hubard
   "176/5261-2", // Tanmay Inamdar
   "58/8776",   // Bart Jansen
   "j/VitJelinek", // Vít Jelínek
-  "229/4297",  // Paul Jungeblut
+  // "229/4297",  // Paul Jungeblut
   "59/577",    // Shahin Kamali
-  "323/5427",  // Julia Katheder
+  // "323/5427",  // Julia Katheder
   "k/MichaelKaufmann1", // Michael Kaufmann
   "130/4006",  // Philipp Kindermann
   "168/8735",  // Jonathan Klawitter
@@ -50,7 +50,7 @@ export const authorIds = [
   "123/5793",  // Fengyi Liu
   "46/6428",   // Maarten Löffler
   "32/9126",   // Giordano Da Lozzo
-  "299/1764",  // Nicolas El Maalouly
+  // "299/1764",  // Nicolas El Maalouly
   "167/4065",  // Tomás Masarík
   "201/8115",  // Zuzana Masárová
   "32/4396",   // Tamara Mchedlidze
@@ -72,7 +72,7 @@ export const authorIds = [
   "195/5907",  // Patrick Schnider
   "s/FalkSchreiber", // Falk Schreiber
   "80/1348-1", // André Schulz
-  "01/283",    // András Sebő
+  // "01/283",    // András Sebő
   "236/6131",  // Kirill Simonov
   "204/8617",  // Raphael Steiner
   "122/6810",  // Peter Stumpf

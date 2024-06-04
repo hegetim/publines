@@ -1,10 +1,9 @@
 import _ from "lodash";
-import { kBatches, publications, setupStorylines } from "./Datasets"
-import { contenders } from "./Algorithms";
-import { evaluateAll } from "./Evaluations";
-import { Metrics } from "../model/Storyline";
+import { kBatches, publications, setupStoryline, setupStorylines } from "./Datasets"
+import { Contender, bidiOldGreedySbcmWithBundling, bidirectionalSbcm, bidirectionalSbcmWithBundling, contenders, medianScmWithBundling, oneSidedWithBundling, twoSidedWithBundling } from "./Algorithms";
+import { evaluateAll, evaluateOne, Metrics as EvaluationMetrics } from "./Evaluations";
 
-export const run = async () => {
+export const runAggregate = async () => {
     const dataset = await publications();
     const stories = _.unzip(dataset.flatMap(arg => setupStorylines(...arg))); // by coauthor number
     const reals = stories.map(ss => ss.map(s => contenders.map(c => {
@@ -20,11 +19,67 @@ export const run = async () => {
             console.log(`--> ${contender.description}`);
             const m = avg[j]!;
             for (const k of Object.keys(m)) {
-                const key = k as keyof Metrics;
-                console.log(`${key}:\t${m[key].toFixed(2)}\t(${(beta[j]![key] * 100).toFixed(2)}%)`);
+                const key = k as keyof EvaluationMetrics;
+                console.log(`${key},${m[key].toFixed(2)},${(beta[j]![key] * 100).toFixed(2)}%`);
             }
         });
     });
 }
 
-run();
+export const runCompare = async (k: number, cs: readonly Contender[], metric: keyof EvaluationMetrics) => {
+    const dataset = await publications();
+    const stories = dataset.map(([pid, publications]) => setupStoryline(publications, pid, k - 1));
+    console.log(`==== ${metric}, k=${k} ====`);
+    console.log(`protagonist,${cs.map(c => c.description)}`);
+    stories.forEach(story => {
+        const reals = cs.map(c => c.run(story));
+        const metrics = reals.map(real => evaluateOne(story, real)[metric]);
+        console.log(`${story.authorIds[0]},${metrics.map(m => m.toFixed(0))}`);
+    })
+}
+
+export const runDatasetSpec = async () => {
+    const dataset = await publications();
+    console.log(`==== Size of the Storyline ====`);
+    console.log(`protagonist,#publications`);
+    dataset.forEach(([pid, publications]) =>
+        console.log(`${pid},${setupStoryline(publications, pid, 20).meetings.length}`)
+    );
+}
+
+const allMetrics: (keyof EvaluationMetrics)[] = ['crossings', 'blockCrossings', 'passages', 'bundleNumber'];
+
+export const runOneAlgo = async (k: number, algo: Contender) => {
+    const dataset = await publications();
+    const stories = dataset.map(([pid, publications]) => setupStoryline(publications, pid, k - 1));
+    console.log(`==== ${algo.description}, k=${k} ====`);
+    console.log(`protagonist,${allMetrics}`);
+    stories.forEach(story => {
+        const metrics = evaluateOne(story, algo.run(story));
+        console.log(`${story.authorIds[0]},${allMetrics.map(key => metrics[key])}`);
+    })
+
+}
+
+// runDatasetSpec();
+
+// runCompare(21, [oneSidedWithBundling, twoSidedWithBundling, bidirectionalSbcm, medianScmWithBundling], 'crossings');
+// runCompare(21, [oneSidedWithBundling, twoSidedWithBundling, bidirectionalSbcm, medianScmWithBundling], 'blockCrossings');
+// runCompare(21, [oneSidedWithBundling, twoSidedWithBundling, bidirectionalSbcm, medianScmWithBundling], 'passages');
+
+runAggregate();
+
+// runOneAlgo(6, twoSidedWithBundling);
+// runOneAlgo(11, twoSidedWithBundling);
+// runOneAlgo(16, twoSidedWithBundling);
+// runOneAlgo(6, oneSidedWithBundling);
+// runOneAlgo(11, oneSidedWithBundling);
+// runOneAlgo(16, oneSidedWithBundling);
+// runOneAlgo(6, medianScmWithBundling);
+// runOneAlgo(11, medianScmWithBundling);
+// runOneAlgo(16, medianScmWithBundling);
+
+// runCompare(6, [bidirectionalSbcm, bidirectionalSbcmWithBundling], "blockCrossings");
+// runCompare(11, [bidirectionalSbcm, bidirectionalSbcmWithBundling], "blockCrossings");
+// runCompare(16, [bidirectionalSbcm, bidirectionalSbcmWithBundling], "blockCrossings");
+// runCompare(21, [bidirectionalSbcm, bidirectionalSbcmWithBundling], "blockCrossings");
