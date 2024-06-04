@@ -46,7 +46,7 @@ export const Settings = (props: { config: UserConfig, updateConfig: (f: (c: User
                 <SelectInput<AlgoConfig['realization']> classNames={['settings-select-algo']}
                     value={props.config.algo.realization} handle={r => props.updateConfig(algoReal(r))}
                     sanitize={sanitize(realizationAlgos, props.config.algo.realization)}
-                    options={{ '1scm': "one-sided SCM", '2scm': "two-sided SCM", mscm: "median SCM", sbcm: "greedy SBCM", 'bi-sbcm': "bidirectional SBCM" }} />
+                    options={{ '1scm': "one-sided SCM", '2scm': "two-sided SCM", mscm: "median SCM", sbcm: "greedy SBCM" }} />
                 <div className="settings-setting-label">crossings bundling:</div>
                 <SelectButton<AlgoConfig['bundling']> value={props.config.algo.bundling}
                     setValue={key => props.updateConfig(algoBundle(key))} additionalClassNames={['settings-input-container']}

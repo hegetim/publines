@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { kBatches, publications, setupStoryline, setupStorylines } from "./Datasets"
-import { Contender, bidiOldGreedySbcmWithBundling, bidirectionalSbcm, bidirectionalSbcmWithBundling, contenders, medianScmWithBundling, oneSidedWithBundling, twoSidedWithBundling } from "./Algorithms";
+import { Contender, bidirectionalSbcm, bidirectionalSbcmWithBundling, contenders, medianScmWithBundling, oneSidedWithBundling, twoSidedWithBundling } from "./Algorithms";
 import { evaluateAll, evaluateOne, Metrics as EvaluationMetrics } from "./Evaluations";
 
 export const runAggregate = async () => {
