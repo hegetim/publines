@@ -4,38 +4,35 @@
     align-items: center;
     column-gap: 1ex;
     width: 160px;
+    overflow: hidden;
 }
 
-.loading-main-icon path {
-    animation: color-spin 2.5s infinite;
+.loading-animated {
+    width: 50px;
+    aspect-ratio: 1;
+    display: grid;
+    border-radius: 50%;
+    background: conic-gradient(#44a1a0 25%, #cd4631 0 50%, #063d79 0 75%, #ffa630 0);
+    animation: l22 2s infinite linear;
 }
 
-@keyframes color-spin {
-    0% {
-        fill: #063d79;
-    }
+.loading-animated::before,
+.loading-animated::after {
+    content: "";
+    grid-area: 1/1;
+    margin: 15%;
+    border-radius: 50%;
+    background: inherit;
+    animation: inherit;
+}
 
-    10% {
-        fill: #063d79;
-    }
+.loading-animated::after {
+    margin: 25%;
+    animation-duration: 3s;
+}
 
-    28% {
-        fill: #ffa630;
-    }
-
-    46% {
-        fill: #44a1a0;
-    }
-
-    64% {
-        fill: #78cdd7;
-    }
-
-    82% {
-        fill: #cd4631;
-    }
-
+@keyframes l22 {
     100% {
-        fill: #063d79;
+        transform: rotate(1turn)
     }
 }
