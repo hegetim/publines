@@ -50,7 +50,7 @@ p.intro-par {
 .main-page-imprint {
     position: sticky;
     bottom: 0px;
-    grid-column: 2;
+    grid-column: 1 / span 3;
     display: flex;
     justify-content: center;
     gap: 1ex;

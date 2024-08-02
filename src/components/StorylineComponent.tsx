@@ -32,7 +32,7 @@ export const StorylineComponent = (props: {
         const sections = mkSections(props.story, realization, props.publications)!;
         const drawn = drawSections(drawingConfig, sections, realization.initialPermutation);
 
-        console.log('rendered storyline component (this draws a storyline)')
+        // console.log('rendered storyline component (this draws a storyline)')
 
         return <React.Fragment>
             <div className="story-main-container">
@@ -92,7 +92,7 @@ const mkRealization = (config: AlgoConfig) => (story: Storyline) => matchString(
 
 const mkBundling = (config: AlgoConfig, story: Storyline) => (real: Realization) => matchString(config.bundling, {
     ignore: () => real,
-    bundle: () => { const [res, splits] = mkBundles(story, real); console.log(`#splits: ${splits}`); return res; },
+    bundle: () => { const [res, splits] = mkBundles(story, real); /* console.log(`#splits: ${splits}`); */ return res; },
     unbundle: () => unbundle(real),
 });
 

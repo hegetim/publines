@@ -50,12 +50,19 @@ const App = () => {
         });
     }, [setConfig]);
 
-    useEffect(() => {
+    const applyFromUrl = useCallback(() => {
         restoreFromUrl().then(res => {
             console.log(res);
             if (res.mainAuthor) { handleAuthorChanged(res.mainAuthor); }
             if (res.settings) { setConfig(res.settings); }
         })
+    }, [handleAuthorChanged, setConfig]);
+
+    useEffect(() => {
+        applyFromUrl();
+        const listener = applyFromUrl;
+        window.addEventListener('popstate', listener);
+        return () => window.removeEventListener('popstate', listener);
     }, []);
 
     return <div className="App">
@@ -96,7 +103,7 @@ const PublicationsComponent = (props: {
         return <span className='story-main-empty'>{`${props.mainAuthor.name} has no publications`}</span>;
     } else {
         const res = handlePublications(props.publications, props.mainAuthor, props.config);
-        console.log('rendered publication component (this builds a storyline)')
+        // console.log('rendered publication component (this builds a storyline)')
         return <React.Fragment>
             <StorylineComponent config={props.config} protagonist={props.mainAuthor} publications={res.filtered}
                 story={res.story} authors={res.authors} />
@@ -124,9 +131,24 @@ const fetchAuthors = (s: string) => Dblp.findAuthor(s)
 const saveToUrl = async (mainAuthor: Author | undefined, settings: Conf.UserConfig | undefined) => {
     if (!mainAuthor && !settings) { return; }
     const url = new URL(window.location.href);
-    if (mainAuthor) { url.searchParams.set('p', JSON.stringify(mainAuthor)); }
-    if (settings) { url.searchParams.set('s', await Conf.store(settings)); }
-    window.history.pushState({}, "", url);
+    var dirty = false;
+    if (mainAuthor) {
+        const authorString = JSON.stringify(mainAuthor);
+        if (url.searchParams.get('p') !== authorString) {
+            url.searchParams.set('p', authorString);
+            // console.log("updated protagonist url");
+            dirty = true;
+        }
+    }
+    if (settings) {
+        const settingsString = await Conf.store(settings);
+        if (url.searchParams.get('s') !== settingsString) {
+            url.searchParams.set('s', settingsString);
+            // console.log("updated settings url");
+            dirty = true;
+        }
+    }
+    if (dirty) window.history.pushState({}, "", url);
 }
 
 const restoreFromUrl = async () => {
@@ -135,11 +157,6 @@ const restoreFromUrl = async () => {
     if (params.has('p')) { res.mainAuthor = JSON.parse(params.get('p') ?? 'undefined') }
     if (params.has('s')) { res.settings = await Conf.loadWithDefaults(params.get('s') ?? undefined) }
     return res;
-}
-
-interface QueryData {
-    p: Author | undefined,
-    s: string,
 }
 
 export default App;
