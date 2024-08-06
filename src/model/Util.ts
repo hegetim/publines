@@ -96,3 +96,5 @@ export const shuffle = <T>(ts: T[], random: () => number) => _.range(ts.length -
 });
 
 export const ifLet = <T, R>(t: T | undefined, f: (t: T) => R) => t === undefined ? undefined : f(t);
+
+export const fail = (msg: string): never => { throw new TypeError(msg); }

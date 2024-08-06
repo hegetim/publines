@@ -1,7 +1,7 @@
-import { DrawingConfig, MeetingStyle, Stretch } from "../components/StorylineDrawings";
-import { ExcludeInformal } from "./Metadata";
-import { TupleToUnion, matchString } from "./Util";
-import base64js from "base64-js";
+import { DrawingConfig, enumerationStyles, MeetingStyle, Stretch } from "../components/StorylineDrawings";
+import { ExcludeInformal, excludeInformalOpts } from "./Metadata";
+import { bimap, Codec, concat, enumCodec, numberCodec, or, productCodec, singletonCodec } from "./StringCoded";
+import { TupleToUnion, fail, matchString } from "./Util";
 
 export interface UserConfig {
     style: StyleConfig,
@@ -14,9 +14,12 @@ export interface StyleConfig {
     meetingStyle: MeetingStyle['kind'],
     xAxisPosition: DrawingConfig['xAxisPos'],
     enumerationStyle: DrawingConfig['enumerateMeetings'],
-    authorLineThickness: 'thin' | 'normal' | 'heavier' | 'fat',
-    stretch: 'condensed' | 'normal' | 'expanded',
+    authorLineThickness: TupleToUnion<typeof lineThicknesses>,
+    stretch: TupleToUnion<typeof stretches>,
 }
+
+export const lineThicknesses = ['thin', 'normal', 'heavier', 'fat'] as const;
+export const stretches = ['condensed', 'normal', 'expanded'] as const;
 
 export interface DataConfig {
     source: TupleToUnion<typeof dataSources>,
@@ -29,10 +32,11 @@ export const dataSources = ['dblp', 'playground'] as const;
 
 export interface AlgoConfig {
     realization: TupleToUnion<typeof realizationAlgos>,
-    bundling: 'bundle' | 'ignore' | 'unbundle',
+    bundling: TupleToUnion<typeof bundlingOpts>,
 }
 
 export const realizationAlgos = ['1scm', '2scm', 'mscm', 'sbcm', 'bi-sbcm'] as const;
+export const bundlingOpts = ['bundle', 'ignore', 'unbundle'] as const;
 
 const baseThickness = 3;
 
@@ -77,28 +81,38 @@ export const configDefaults: UserConfig = {
     },
 }
 
-export const store = async (conf: UserConfig) => {
-    const json = JSON.stringify(conf);
-    const fullSize = encodeURI(json).length;
-    const stream = new Blob([json]).stream();
-    const compressed = stream.pipeThrough<Uint8Array>(new CompressionStream('deflate-raw'));
-    const blob = new Uint8Array(await new Response(compressed).arrayBuffer());
-    const res = base64js.fromByteArray(blob);
-    console.info(`settings compression ratio: ${res.length / fullSize * 100}%`);
-    return res;
-}
+export const store = (conf: UserConfig) => versionedCodec.enc(conf)
 
-export const unsafeLoad = async (raw: string) => {
-    try {
-        const blob = base64js.toByteArray(raw);
-        const stream = new Blob([blob]).stream();
-        const inflated = stream.pipeThrough<Uint8Array>(new DecompressionStream('deflate-raw'));
-        return await new Response(inflated).json()
-    } catch (err) {
-        console.warn(err);
-        return {};
-    }
-}
+export const loadWithDefaults = (raw: string | undefined) =>
+    raw ? ({ ...configDefaults, ...versionedCodec.dec(raw)[0] }) : configDefaults;
 
-export const loadWithDefaults = async (raw: string | undefined): Promise<UserConfig> =>
-    raw ? ({ ...configDefaults, ...await unsafeLoad(raw) }) : configDefaults;
+const version = 1
+
+const styleCodec: Codec<StyleConfig> = productCodec({
+    lineDistance: numberCodec(),
+    meetingStyle: enumCodec(['bar', 'metro']),
+    xAxisPosition: enumCodec(['bottom', 'top']),
+    enumerationStyle: enumCodec(enumerationStyles),
+    authorLineThickness: enumCodec(lineThicknesses),
+    stretch: enumCodec(stretches),
+});
+
+const dataCodec: Codec<DataConfig> = productCodec({
+    source: enumCodec(dataSources),
+    coauthorCap: or(singletonCodec('f', false), numberCodec(), x => x === false),
+    excludeInformal: enumCodec(excludeInformalOpts),
+    excludeOld: or(singletonCodec('f', false), numberCodec(), x => x === false),
+});
+
+const algoCodec: Codec<AlgoConfig> = productCodec({
+    bundling: enumCodec(bundlingOpts),
+    realization: enumCodec(realizationAlgos),
+});
+
+const configCodec: Codec<UserConfig> = productCodec({ style: styleCodec, data: dataCodec, algo: algoCodec });
+
+const versionedCodec: Codec<UserConfig> = bimap(
+    concat([numberCodec(), singletonCodec('_', '_' as const), configCodec] as const),
+    ([v, _0, c]) => v !== version ? fail(`unsupported version ${v}`) : c,
+    c => [version, '_', c] as const,
+);

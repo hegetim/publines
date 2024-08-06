@@ -73,14 +73,17 @@ export const Settings = (props: { config: UserConfig, updateConfig: (f: (c: User
                 <BinarySelect<StyleConfig['xAxisPosition']> classNames={['settings-input-container']}
                     toggle={() => props.updateConfig(toggleXAxisPos)} value={props.config.style.xAxisPosition}
                     options={{ left: ['top', "top"], right: ['bottom', "bottom"] }} />
-                <OptionalSelectInput<TupleToUnion<typeof enumerationStyles>> classNames={['settings-setting-oneline']}
-                    default='x' value={props.config.style.enumerationStyle} setValue={s => props.updateConfig(enumStyle(s))}
-                    sanitize={sanitize(enumerationStyles, 'x')} labels={{ infix: "enumerate publications as" }}
+                <OptionalSelectInput<TupleToUnion<typeof enumStylesWithoutNone>> classNames={['settings-setting-oneline']}
+                    default='x' value={exclude(props.config.style.enumerationStyle, '')} setValue={s => props.updateConfig(enumStyle(s ?? ''))}
+                    sanitize={sanitize(enumStylesWithoutNone, 'x')} labels={{ infix: "enumerate publications as" }}
                     options={{ 'x': "plain numbers", '[x]': "numbers with brackets", 'x.': "numbers followed by a period" }} />
             </div>
         </div>
     </div>;
 }
+
+const enumStylesWithoutNone = ['x', '[x]', 'x.'] as const;
+const exclude = <T extends string, S extends T>(t: T, s: S): Exclude<T, S> | undefined => t === s ? undefined : t as Exclude<T, S>
 
 const dataSource: (src: DataConfig['source']) => (c: UserConfig) => UserConfig = O.set(O.compose('data', 'source'));
 

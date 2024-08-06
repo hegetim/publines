@@ -7,7 +7,7 @@ export interface DrawingConfig {
     lineDist: number,
     stretch: Stretch,
     meetingStyle: MeetingStyle,
-    enumerateMeetings: undefined | TupleToUnion<typeof enumerationStyles>,
+    enumerateMeetings: TupleToUnion<typeof enumerationStyles>,
     xAxisPos: 'top' | 'bottom',
     crossing2crossingMargin: number,
     crossing2meetingMargin: number,
@@ -38,7 +38,7 @@ export type MeetingStyle = {
     relStrapSize: number,
 }
 
-export const enumerationStyles = ['x', '[x]', 'x.'] as const;
+export const enumerationStyles = ['x', '[x]', 'x.', ''] as const;
 
 export interface BBox {
     top: number,

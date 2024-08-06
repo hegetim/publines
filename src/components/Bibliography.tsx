@@ -69,8 +69,9 @@ const renderProceedingPages = (m: BibMeta) =>
 
 const mkHref = (p: Publication) => p.metadata.link ? p.metadata.link.toString() : p.url.toString();
 
-const mkEnumeratedLabel = (style: StyleConfig['enumerationStyle'], i: number) => matchString(style ?? 'x.', {
-    'x': () => i.toString(),
+const mkEnumeratedLabel = (style: StyleConfig['enumerationStyle'], i: number) => matchString(style, {
+    x: () => i.toString(),
+    '': () => `${i}.`,
     'x.': () => `${i}.`,
     '[x]': () => `[${i}]`,
 });
