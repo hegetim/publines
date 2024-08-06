@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 import React, { useCallback, useEffect, useState } from "react";
 import { ClassNames, cls } from "../model/Util";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

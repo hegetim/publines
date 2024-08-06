@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 import React, { useEffect } from "react"
 import _ from "lodash";
 import { DrawingConfig, DrawingResult, ProtoLabel, bbox2viewBox } from "./StorylineDrawings"

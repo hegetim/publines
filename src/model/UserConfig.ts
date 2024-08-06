@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 import { DrawingConfig, enumerationStyles, MeetingStyle, Stretch } from "../components/StorylineDrawings";
 import { ExcludeInformal, excludeInformalOpts } from "./Metadata";
 import { bimap, Codec, concat, enumCodec, numberCodec, or, productCodec, singletonCodec } from "./StringCoded";

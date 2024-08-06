@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 import { biSbcm } from "../model/BiSbcm";
 import { mkBundles } from "../model/CrossingComplex";
 import { biSbcmOld, greedySbcm } from "../model/GreedySbcm";

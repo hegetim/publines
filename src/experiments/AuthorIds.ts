@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 export const authorIds = [
   "33/289",    // Oswin Aichholzer
   "185/1576",  // Daniel Archambault

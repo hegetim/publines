@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 import { performance, PerformanceObserver } from "node:perf_hooks";
 import { publications, setupStoryline } from "./Datasets";
 import { Storyline } from "../model/Storyline";

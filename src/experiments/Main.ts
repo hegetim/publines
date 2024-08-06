@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 import _ from "lodash";
 import { kBatches, publications, setupStoryline, setupStorylines } from "./Datasets"
 import { Contender, bidiOldGreedySbcmWithBundling, bidirectionalSbcm, bidirectionalSbcmWithBundling, contenders, medianScmWithBundling, oneSidedWithBundling, twoSidedWithBundling } from "./Algorithms";

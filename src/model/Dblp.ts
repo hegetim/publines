@@ -1,3 +1,7 @@
+/* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 import _ from "lodash";
 import { Author, BibMeta, Publication } from "./Metadata";
 import { as, matchString } from "./Util";
