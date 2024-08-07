@@ -1,4 +1,8 @@
-# SPDX-FileCopyrightText: NONE
+# SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
 # SPDX-License-Identifier: CC0-1.0
+
+# empty lines and lines starting with # get ignored
+# add comma separated triples:
+# <logo url (may be empty)>,<text shown in footer>,<link target (may be empty)>
 
 gh.svg,find us on GitHub,https://github.com/hegetim/publines

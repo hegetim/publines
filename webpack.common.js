@@ -1,5 +1,5 @@
 /* SPDX-FileCopyrightText: 2024 Tim Hegemann <hegemann@informatik.uni-wuerzburg.de>
- * SPDX-License-Identifier: AGPL-3.0-or-later
+ * SPDX-License-Identifier: CC0-1.0
  */
 
 const path = require('path');
