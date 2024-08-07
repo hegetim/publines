@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: CC0-1.0
-// see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#splitmix32
+/* SPDX-FileCopyrightText: 2018 bryc <https://github.com/bryc>
+ * SPDX-License-Identifier: CC0-1.0
+ * see https://github.com/bryc/code/blob/master/jshash/PRNGs.md#splitmix32
+ */
 
 export const splitmix32 = (seed: number) => () => {
     seed |= 0; seed = seed + 0x9e3779b9 | 0;
