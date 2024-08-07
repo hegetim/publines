@@ -82,9 +82,9 @@ const App = () => {
             : <PublicationsComponent publications={fakePublications(playgroundData)} mainAuthor={fakeMainAuthor}
                 config={config} setMainAuthor={handleAuthorChanged} />}
         <span className='main-page-imprint'>
-            <a href='https://www.uni-wuerzburg.de/en/sonstiges/imprint-privacy-policy/'>Imprint + Privacy Policy</a>
+            <a href='https://graphdrawing.github.io/gd2024'>Anonymized for</a>
             <span>•</span>
-            <a href='https://www.uni-wuerzburg.de/en/sonstiges/privacy-disclaimer/'>Privacy Disclaimer</a>
+            <a href='https://graphdrawing.github.io/gd2024'>blind review</a>
         </span>
     </div>;
 }

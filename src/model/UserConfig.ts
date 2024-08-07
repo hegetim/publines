@@ -39,7 +39,7 @@ export interface AlgoConfig {
     bundling: TupleToUnion<typeof bundlingOpts>,
 }
 
-export const realizationAlgos = ['1scm', '2scm', 'mscm', 'sbcm', 'bi-sbcm'] as const;
+export const realizationAlgos = ['1scm', '2scm', 'mscm', 'sbcm'] as const;
 export const bundlingOpts = ['bundle', 'ignore', 'unbundle'] as const;
 
 const baseThickness = 3;
@@ -74,7 +74,7 @@ export const mkDrawingConfig = (base: StyleConfig): DrawingConfig => ({
 
 export const configDefaults: UserConfig = {
     algo: { realization: '2scm', bundling: 'bundle' },
-    data: { source: 'dblp', excludeInformal: 'repeated', excludeOld: 10, coauthorCap: 10 },
+    data: { source: 'dblp', excludeInformal: 'repeated', excludeOld: 10, coauthorCap: 15 },
     style: {
         lineDistance: 24,
         meetingStyle: 'metro',
