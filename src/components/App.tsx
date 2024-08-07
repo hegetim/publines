@@ -15,6 +15,7 @@ import { mkStoryline } from '../model/Storyline';
 import { Playground, PlaygroundData, fakeMainAuthor, fakePublications, fromStoryline } from './Playground';
 import { Bibliography } from './Bibliography';
 import { Loading } from './Loading';
+import { Imprint } from './Imprint';
 
 const App = () => {
     const [config, setConfig] = useState(Conf.configDefaults);
@@ -81,11 +82,7 @@ const App = () => {
                 setMainAuthor={handleAuthorChanged} />
             : <PublicationsComponent publications={fakePublications(playgroundData)} mainAuthor={fakeMainAuthor}
                 config={config} setMainAuthor={handleAuthorChanged} />}
-        <span className='main-page-imprint'>
-            <a href='https://graphdrawing.github.io/gd2024'>Anonymized for</a>
-            <span>•</span>
-            <a href='https://graphdrawing.github.io/gd2024'>blind review</a>
-        </span>
+        <Imprint />
     </div>;
 }
 
