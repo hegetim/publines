@@ -18,6 +18,17 @@ export const numberCodec = (): Codec<number> => ({
     }
 });
 
+export const stringCodec = (): Codec<string> => ({
+    enc: (s: string) => `${s.length}_${s}`,
+    dec: (s: string) => {
+        const [_0, len_, rest] = s.match(/^(\d+)_(.+)/) ?? [];
+        console.log(`${s} -> ${_0}  ${len_}  ${rest}`)
+        if (len_ === undefined || rest === undefined) return [undefined, s];
+        const len = parseInt(len_);
+        return [rest.substring(0, len), rest.substring(len)]
+    }
+})
+
 export const enumCodec = <K extends string, T extends readonly K[]>(keys: T): Codec<TupleToUnion<T>> => ({
     enc: t => number2ascii(keys.indexOf(t)),
     dec: s => {

@@ -4,6 +4,7 @@
 
 import _ from "lodash";
 import { chain, matchString, TupleToUnion } from "./Util";
+import { Codec, productCodec, stringCodec } from "./StringCoded";
 
 export interface Author {
     name: string,
@@ -64,3 +65,8 @@ export const filterByYear = (publ: Publication[], filter: YearFilter): Publicati
 
 export const mkFilter = (informal: ExcludeInformal, year: YearFilter): (ps: Publication[]) => Publication[] =>
     chain((ps: Publication[]) => filterInformal(ps, informal)).then(ps => filterByYear(ps, year)).run;
+
+const authorCodec: Codec<Author> = productCodec({ id: stringCodec(), name: stringCodec() });
+
+export const saveAuthor = (author: Author) => authorCodec.enc(author)
+export const loadAuthor = (s: string) => authorCodec.dec(s)[0]

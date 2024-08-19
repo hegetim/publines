@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import _ from 'lodash';
 import * as Dblp from '../model/Dblp';
-import { Author, Publication, YearFilter, mkFilter } from '../model/Metadata';
+import { Author, Publication, YearFilter, loadAuthor, mkFilter, saveAuthor } from '../model/Metadata';
 import { MainAuthor } from './MainAuthor';
 import { StorylineComponent } from './StorylineComponent';
 import * as Conf from '../model/UserConfig';
@@ -134,7 +134,7 @@ const saveToUrl = async (mainAuthor: Author | undefined, settings: Conf.UserConf
     const url = new URL(window.location.href);
     var dirty = false;
     if (mainAuthor) {
-        const authorString = JSON.stringify(mainAuthor);
+        const authorString = saveAuthor(mainAuthor);
         if (url.searchParams.get('p') !== authorString) {
             url.searchParams.set('p', authorString);
             // console.log("updated protagonist url");
@@ -155,7 +155,7 @@ const saveToUrl = async (mainAuthor: Author | undefined, settings: Conf.UserConf
 const restoreFromUrl = async () => {
     const params = new URLSearchParams(window.location.search);
     const res: { mainAuthor?: Author | undefined, settings?: Conf.UserConfig | undefined } = {};
-    if (params.has('p')) { res.mainAuthor = JSON.parse(params.get('p') ?? 'undefined') }
+    if (params.has('p')) { res.mainAuthor = loadAuthor(params.get('p') ?? 'undefined') }
     if (params.has('s')) { res.settings = await Conf.loadWithDefaults(params.get('s') ?? undefined) }
     return res;
 }
