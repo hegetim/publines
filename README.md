@@ -65,7 +65,10 @@ of an optional logo url, some text, and an optional link target:
 Publication
 -----------
 
-Most of the algorithms are described in an upcoming publication at GD2024.
+Most of the algorithms are described in
+
+Tim Hegemann, Alexander Wolff. [Storylines with a Protagonist.](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.GD.2024.26)
+GD2024, vol. 320 of LIPIcs, pp. 26:1–26:22.
 
 
 Contributors
